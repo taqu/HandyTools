@@ -5,6 +5,8 @@ Some tools for code editing.
 
 - Unify file's line feed
 - Unify file's character encoding
+- Full-text search
+  - This is experimental feature on developing. The spec will change, it maybe have incompatibles.
 - Others
   - Load settings from a file. Able to use an individual setting for each projects.
 
@@ -34,9 +36,6 @@ An example setting file "_handytools.xml" is below,
 ```
 <?xml version="1.0" encoding="utf-8"?>
 <HandyTools>
-    <General>
-        <Indexing>false</Indexing>
-    </General>
     <UnifyLineFeed>
         <Code lang="C/C++">
             LF
