@@ -34,6 +34,9 @@ An example setting file "_handytools.xml" is below,
 ```
 <?xml version="1.0" encoding="utf-8"?>
 <HandyTools>
+    <General>
+        <Indexing>false</Indexing>
+    </General>
     <UnifyLineFeed>
         <Code lang="C/C++">
             LF

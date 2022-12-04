@@ -1,0 +1,52 @@
+<UserControl x:Class="HandyTools.SearchWindowControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:vsshell="clr-namespace:Microsoft.VisualStudio.Shell;assembly=Microsoft.VisualStudio.Shell.15.0"
+             Background="{DynamicResource {x:Static vsshell:VsBrushes.WindowKey}}"
+             Foreground="{DynamicResource {x:Static vsshell:VsBrushes.WindowTextKey}}"
+             mc:Ignorable="d"
+             d:DesignHeight="256" d:DesignWidth="848"
+             Name="SearchWindow">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"></ColumnDefinition>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="32"></RowDefinition>
+            <RowDefinition Height="*"></RowDefinition>
+        </Grid.RowDefinitions>
+        <StackPanel Orientation="Horizontal" Grid.Row="0" Grid.Column="0">
+            <TextBox Name="TextBoxSearch" Margin="1,1,1,1" VerticalContentAlignment="Center" HorizontalAlignment="Left" Width="256" Height="28" KeyDown="OnKeyDownTextSearch" Background="{DynamicResource {x:Static vsshell:VsBrushes.SearchBoxBackgroundKey}}" Foreground="{DynamicResource {x:Static vsshell:VsBrushes.WindowTextKey}}"></TextBox>
+            <Button Name="ButtonSearch" Content="Search" Margin="4,1,1,1" Width="64" Height="28" Click="OnClickButtonSearch" Background="{DynamicResource {x:Static vsshell:VsBrushes.ButtonFaceKey}}" Foreground="{DynamicResource {x:Static vsshell:VsBrushes.ButtonTextKey}}"/>
+            <CheckBox Name="CheckBoxCaseSensitive" IsChecked="True" Content="Case Sensitive" Margin="4,1,1,1" Width="128" Height="28" Foreground="{DynamicResource {x:Static vsshell:VsBrushes.WindowTextKey}}"/>
+            <ComboBox Name="CombBoxMethod" Margin="4,1,1,1" HorizontalAlignment="Left" VerticalContentAlignment="Center" Width="128" Height="28" SelectedIndex="0"/>
+            <TextBlock Name="TextBlockStatus" Margin="4,1,1,1" HorizontalAlignment="Left" Width="256" Height="28" Background="{DynamicResource {x:Static vsshell:VsBrushes.WindowKey}}" Foreground="{DynamicResource {x:Static vsshell:VsBrushes.WindowTextKey}}"/>
+        </StackPanel>
+        <ListView Name="ListViewResult" Width="Auto" Height="Auto" Margin="1,1,1,1" Grid.Row="1" Grid.Column="0" Background="{DynamicResource {x:Static vsshell:VsBrushes.WindowKey}}" Foreground="{DynamicResource {x:Static vsshell:VsBrushes.WindowTextKey}}" MouseDoubleClick="OnMouseDoubleClickListViewResult">
+            <ListView.Resources>
+                <Style x:Key="{x:Type GridViewColumnHeader}" TargetType="{x:Type GridViewColumnHeader}">
+                    <Setter Property="Background" Value="{DynamicResource {x:Static vsshell:VsBrushes.ButtonFaceKey}}" />
+                </Style>
+            </ListView.Resources>
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Left" />
+                </Style>
+            </ListView.ItemContainerStyle>
+            <ListView.View>
+                <GridView>
+                    <GridView.ColumnHeaderTemplate>
+                        <DataTemplate>
+                            <TextBlock Foreground="{DynamicResource {x:Static vsshell:VsBrushes.WindowTextKey}}" Background="Transparent" Text="{Binding}"/>
+                        </DataTemplate>
+                    </GridView.ColumnHeaderTemplate>
+                    <GridViewColumn Header="Path" DisplayMemberBinding="{Binding Path}" Width="384"/>
+                    <GridViewColumn Header="Content" DisplayMemberBinding="{Binding Content}" Width="384"/>
+                    <GridViewColumn Header="Line" DisplayMemberBinding="{Binding Line}" Width="48"/>
+                </GridView>
+            </ListView.View>
+        </ListView>
+    </Grid>
+</UserControl>

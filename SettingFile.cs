@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell;
 using System;
 using System.IO;
 using System.Text;
@@ -72,8 +72,8 @@ namespace HandyTools
                 XmlNode node;
                 node = FindChild(root, "UnifyLineFeed");
                 if(null != node) {
+                    Log.Output("ReadCode\n");
                     foreach(XmlNode child in node.ChildNodes) {
-                        Log.Output("ReadCode\n");
                         if("Code" != child.Name) {
                             continue;
                         }
@@ -127,12 +127,9 @@ namespace HandyTools
 
                 node = FindChild(root, "UnifyEncoding");
                 if(null != node) {
+                    Log.Output("ReadEncoding\n");
                     foreach(XmlNode child in node.ChildNodes) {
-                        Log.Output("ReadEncoding\n");
                         if("Encoding" != child.Name) {
-                            continue;
-                        }
-                        if(child.Attributes.Count <= 0) {
                             continue;
                         }
                         string encoding = child.InnerText.Trim();

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio;
@@ -9,6 +9,7 @@ using UtfUnknown;
 using System.IO;
 using System.Text;
 using Microsoft.VisualStudio.Text;
+using EnvDTE80;
 
 namespace HandyTools
 {
@@ -34,7 +35,11 @@ namespace HandyTools
             encoding = Types.TypeEncoding.UTF8;
 
             //Load from a file
-            if(package_.Options.LoadSettingFile) {
+            OptionPageHandyTools optionPage = package_.Options;
+            if(null == optionPage) {
+                return;
+            }
+            if(optionPage.LoadSettingFile) {
                 SettingFile settingFile = package_.LoadFileSettings(documentPath);
                 if(null != settingFile) {
                     linefeed = settingFile.Get(language);
@@ -42,21 +47,18 @@ namespace HandyTools
                 }
             }
             //Otherwise, load from the option page
-            OptionPageHandyTools optionPage = package_.Options;
-            if(null != optionPage) {
-                switch(language) {
-                case Types.TypeLanguage.C_Cpp:
-                    linefeed = optionPage.LineFeedCpp;
-                    break;
-                case Types.TypeLanguage.CSharp:
-                    linefeed = optionPage.LineFeedCSharp;
-                    break;
-                default:
-                    linefeed = optionPage.LineFeedOthers;
-                    break;
-                }
-                encoding = optionPage.Encoding;
+            switch(language) {
+            case Types.TypeLanguage.C_Cpp:
+                linefeed = optionPage.LineFeedCpp;
+                break;
+            case Types.TypeLanguage.CSharp:
+                linefeed = optionPage.LineFeedCSharp;
+                break;
+            default:
+                linefeed = optionPage.LineFeedOthers;
+                break;
             }
+            encoding = optionPage.Encoding;
         }
 
         private Document GetCurrentDocument(uint docCookie)
@@ -93,25 +95,33 @@ namespace HandyTools
         public int OnAfterSave(uint docCookie)
         {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-            Log.Output(string.Format("Load _handytools.xml: {0}\n", package_.Options.LoadSettingFile));
-
             //Get the current document
             EnvDTE.Document document = GetCurrentDocument(docCookie);
             if(null == document) {
                 return VSConstants.S_OK;
             }
-            if(document.Kind != "{8E7B96A8-E33D-11D0-A6D5-00C04FB67F6A}") {
+            if(document.Kind != EnvDTE.Constants.vsDocumentKindText) {
                 return VSConstants.S_OK;
             }
-            ProjectItem projectItem = document.ProjectItem;
+
+            OptionPageHandyTools optionPage = package_.Options;
+            if(null!=optionPage && optionPage.EnableSearch) {
+                ProjectItem projectItem = document.ProjectItem;
+                package_.JoinableTaskFactory.Run(async () => {
+                    ISearchService service = await package_.GetServiceAsync(typeof(SSearchService)) as ISearchService;
+                    if(null != service && null != projectItem) {
+                        await service.UpdateAsync(projectItem);
+                    }
+                });
+            }
+
             EnvDTE.TextDocument textDocument = document.Object("TextDocument") as EnvDTE.TextDocument;
             if(null == textDocument) {
                 return VSConstants.S_OK;
             }
 
-            //Get the current language
+            //Check current encoding
             Types.TypeLanguage language = Types.TypeLanguage.Others;
-            //Specify a target line-feed code
             LoadSettings(out var linefeed, language, out var encoding, document.Path);
             UtfUnknown.DetectionDetail charsetResult;
             try {
@@ -120,6 +130,7 @@ namespace HandyTools
                 return VSConstants.S_OK;
             }
 
+            //Overwrite if needed
             bool write = false;
             if(0.5f <= charsetResult.Confidence) {
                 switch(encoding) {
@@ -170,14 +181,13 @@ namespace HandyTools
         public int OnBeforeSave(uint docCookie)
         {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-            Log.Output(string.Format("Load _handytools.xml: {0}\n", package_.Options.LoadSettingFile));
 
             //Get the current document
             EnvDTE.Document document = GetCurrentDocument(docCookie);
             if(null == document) {
                 return VSConstants.S_OK;
             }
-            if(document.Kind != "{8E7B96A8-E33D-11D0-A6D5-00C04FB67F6A}") {
+            if(document.Kind != EnvDTE.Constants.vsDocumentKindText) {
                 return VSConstants.S_OK;
             }
             ProjectItem projectItem = document.ProjectItem;

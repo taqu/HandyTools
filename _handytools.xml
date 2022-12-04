@@ -14,4 +14,7 @@
     <UnifyEncoding>
         <Encoding>UTF8</Encoding>
     </UnifyEncoding>
+    <Search>
+        <Enable>true</Enable>
+    </Search>
 </HandyTools>
