@@ -43,6 +43,7 @@ namespace HandyTools
                 SettingFile settingFile = package_.LoadFileSettings(documentPath);
                 if(null != settingFile) {
                     linefeed = settingFile.Get(language);
+                    encoding = settingFile.Encoding;
                     return;
                 }
             }

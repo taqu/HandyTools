@@ -1,3 +1,5 @@
+- v.0.3.0
+  - Fix failures on loading settings
 - v.0.2.0
   - Add full-text search
 - v.0.1.0

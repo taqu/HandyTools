@@ -491,6 +491,9 @@ namespace HandyTools
             if(null == package) {
                 return;
             }
+            if(null == projectItem.Document) {
+                return;
+            }
             OptionPageHandyTools dialog = package.Options;
             string realPath = projectItem.Document.FullName;
             if(!System.IO.File.Exists(realPath)) {

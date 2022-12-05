@@ -33,8 +33,8 @@ namespace HandyTools
     [Guid(HandyToolsPackage.PackageGuidString)]
     [ProvideAutoLoad(UIContextGuids.SolutionExists, PackageAutoLoadFlags.BackgroundLoad)]
     [ProvideOptionPage(typeof(OptionPageHandyTools), "HandyTools", "General", 0, 0, true)]
-    [ProvideMenuResource("1000", 1)]
-    [ProvideToolWindow(typeof(SearchWindow))]
+    [ProvideMenuResource("Menus.ctmenu", 1)]
+    [ProvideToolWindow(typeof(SearchWindow), Style = VsDockStyle.Tabbed, DockedWidth = 300, Window = "DocumentWell", Orientation = ToolWindowOrientation.Left)]
     //[ProvideToolWindowVisibility(typeof(SearchWindow), /*UICONTEXT_SolutionExists*/"f1536ef8-92ec-443c-9ed7-fdadf150da82")]
     public sealed class HandyToolsPackage : AsyncPackage
     {
