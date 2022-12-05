@@ -6,7 +6,7 @@ Some tools for code editing.
 - Unify file's line feed
 - Unify file's character encoding
 - Full-text search
-  - This is experimental feature on developing. The spec will change, it maybe have incompatibles.
+  - This is experimental feature on developing. The spec will change, it may have incompatibles.
 - Others
   - Load settings from a file. Able to use an individual setting for each projects.
 

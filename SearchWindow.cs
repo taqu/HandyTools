@@ -15,8 +15,7 @@ namespace HandyTools
     /// implementation of the IVsUIElementPane interface.
     /// </para>
     /// </remarks>
-    //[Guid("5a12f964-ce26-4716-bc22-31a1bb7f76f0")]
-    [Guid("C35F72A7-2F86-48CC-A833-4F7E2CB1DA92")]
+    [Guid("adb2d785-d8d1-4326-96fd-16cb8b0542cb")]
     public class SearchWindow : ToolWindowPane
     {
         /// <summary>
@@ -24,7 +23,7 @@ namespace HandyTools
         /// </summary>
         public SearchWindow() : base(null)
         {
-            this.Caption = "HandyTools SearchWindow";
+            this.Caption = "SearchWindow";
 
             // This is the user control hosted by the tool window; Note that, even if this class implements IDisposable,
             // we are not calling Dispose on this object. This is because ToolWindowPane calls Dispose on

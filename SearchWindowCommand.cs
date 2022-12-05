@@ -22,7 +22,7 @@ namespace HandyTools
         /// <summary>
         /// Command menu group (command set GUID).
         /// </summary>
-        public static readonly Guid CommandSet = new Guid("32168338-57B7-497E-99B6-CFC41BFDF26E");//new Guid("011c7d38-c3b0-4bb7-ae19-35950bd56eee");
+        public static readonly Guid CommandSet = new Guid("decbcfaa-217b-4440-a2b5-cad1666f314d");
 
         /// <summary>
         /// VS Package that provides this command, not null.

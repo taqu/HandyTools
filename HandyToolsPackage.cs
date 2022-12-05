@@ -1,9 +1,7 @@
 using EnvDTE;
-using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using System;
-using System.IO.Packaging;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,20 +26,19 @@ namespace HandyTools
     /// To get loaded into VS, the package must be referred by &lt;Asset Type="Microsoft.VisualStudio.VsPackage" ...&gt; in .vsixmanifest file.
     /// </para>
     /// </remarks>
-    [ProvideService(typeof(SSearchService), IsAsyncQueryable = true)]
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
     [Guid(HandyToolsPackage.PackageGuidString)]
     [ProvideAutoLoad(UIContextGuids.SolutionExists, PackageAutoLoadFlags.BackgroundLoad)]
-    [ProvideOptionPage(typeof(OptionPageHandyTools), "HandyTools", "General", 0, 0, true)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
-    [ProvideToolWindow(typeof(SearchWindow), Style = VsDockStyle.Tabbed, DockedWidth = 300, Window = "DocumentWell", Orientation = ToolWindowOrientation.Left)]
-    //[ProvideToolWindowVisibility(typeof(SearchWindow), /*UICONTEXT_SolutionExists*/"f1536ef8-92ec-443c-9ed7-fdadf150da82")]
+    [ProvideToolWindow(typeof(SearchWindow))]
+    [ProvideService(typeof(SSearchService), IsAsyncQueryable = true)]
+    [ProvideOptionPage(typeof(OptionPageHandyTools), "HandyTools", "General", 0, 0, true)]
     public sealed class HandyToolsPackage : AsyncPackage
     {
         /// <summary>
         /// HandyToolsPackage GUID string.
         /// </summary>
-        public const string PackageGuidString = "02e1bb82-aa38-4e20-9504-aa1dac5c5dcb";
+        public const string PackageGuidString = "daafe9b8-3dc3-4cb6-a2ce-3959212fdc7c";
 
         #region Package Members
 
@@ -85,6 +82,7 @@ namespace HandyTools
             // When initialized asynchronously, the current thread may be a background thread at this point.
             // Do any initialization that requires the UI thread after switching to the UI thread.
             await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
+            await SearchWindowCommand.InitializeAsync(this);
             package_ = new WeakReference<HandyToolsPackage>(this);
             dte2_ = await GetServiceAsync(typeof(EnvDTE.DTE)) as EnvDTE80.DTE2;
             servicePorvider_ = await GetServiceAsync(typeof(Microsoft.VisualStudio.OLE.Interop.IServiceProvider)) as Microsoft.VisualStudio.OLE.Interop.IServiceProvider;
@@ -106,7 +104,6 @@ namespace HandyTools
             if(null != service && null != options && options.EnableSearch) {
                 var _ = service.UpdateAsync();
             }
-            await SearchWindowCommand.InitializeAsync(this);
         }
 
         private void OnSolutionOpened()
