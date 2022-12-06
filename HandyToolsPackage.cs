@@ -99,10 +99,12 @@ namespace HandyTools
             projectItemsEvents_.ItemRenamed += OnProjectItemRenamed;
             AddService(typeof(SSearchService), CreateSearchServiceAsync);
 
-            ISearchService service = await GetServiceAsync(typeof(SSearchService)) as ISearchService;
             OptionPageHandyTools options = Options;
-            if(null != service && null != options && options.EnableSearch) {
-                var _ = service.UpdateAsync();
+            if(null != options && options.EnableSearch) {
+                ISearchService service = await GetServiceAsync(typeof(SSearchService)) as ISearchService;
+                if(null != service){
+                    var _ = service.UpdateAsync();
+                }
             }
         }
 

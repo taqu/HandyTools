@@ -8,7 +8,6 @@ using Lucene.Net.QueryParsers.Flexible.Standard.Config;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Threading;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -581,7 +580,7 @@ namespace HandyTools
                 return null;
             }
             await package.JoinableTaskFactory.SwitchToMainThreadAsync();
-            RebuildPachCache();
+            RebuildPathCache();
 
             if(false == await CheckInitializeAsync()) {
                 return null;
@@ -759,7 +758,7 @@ namespace HandyTools
             pathCache_ = null;
         }
 
-        private void RebuildPachCache()
+        private void RebuildPathCache()
         {
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
             if(null == pathCache_) {

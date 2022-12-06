@@ -1,15 +1,10 @@
-using System.Collections.Generic;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio;
 using System.Linq;
 using EnvDTE;
-using System;
-using UtfUnknown;
 using System.IO;
 using System.Text;
-using Microsoft.VisualStudio.Text;
-using EnvDTE80;
 
 namespace HandyTools
 {

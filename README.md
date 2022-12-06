@@ -33,7 +33,7 @@ Try to find a setting file,
 
 An example setting file "_handytools.xml" is below,
 
-```
+```xml
 <?xml version="1.0" encoding="utf-8"?>
 <HandyTools>
     <UnifyLineFeed>

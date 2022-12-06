@@ -1,9 +1,7 @@
 using Microsoft.VisualStudio.Shell;
 using System;
 using System.IO;
-using System.Text;
 using System.Xml;
-using static HandyTools.OptionPageHandyTools;
 
 namespace HandyTools
 {

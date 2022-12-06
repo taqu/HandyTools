@@ -1,6 +1,5 @@
 using EnvDTE;
 using EnvDTE80;
-using HandyTools;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
