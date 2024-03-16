@@ -100,17 +100,6 @@ namespace HandyTools
                 return VSConstants.S_OK;
             }
 
-            OptionPageHandyTools optionPage = package_.Options;
-            if(null!=optionPage && optionPage.EnableSearch) {
-                ProjectItem projectItem = document.ProjectItem;
-                package_.JoinableTaskFactory.Run(async () => {
-                    ISearchService service = await package_.GetServiceAsync(typeof(SSearchService)) as ISearchService;
-                    if(null != service && null != projectItem) {
-                        await service.UpdateAsync(projectItem);
-                    }
-                });
-            }
-
             EnvDTE.TextDocument textDocument = document.Object("TextDocument") as EnvDTE.TextDocument;
             if(null == textDocument) {
                 return VSConstants.S_OK;

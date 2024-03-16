@@ -1,5 +1,3 @@
-using Microsoft.VisualStudio.Shell;
-using System;
 using System.IO;
 using System.Xml;
 

@@ -1,11 +1,11 @@
+global using Community.VisualStudio.Toolkit;
+global using Microsoft.VisualStudio.Shell;
+global using System;
+global using Task = System.Threading.Tasks.Task;
 using EnvDTE;
-using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
-using System;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Threading.Tasks;
-using Task = System.Threading.Tasks.Task;
 
 namespace HandyTools
 {
@@ -27,14 +27,13 @@ namespace HandyTools
     /// </para>
     /// </remarks>
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
-    [Guid(HandyToolsPackage.PackageGuidString)]
+	[InstalledProductRegistration(Vsix.Name, Vsix.Description, Vsix.Version)]
+	[Guid(HandyToolsPackage.PackageGuidString)]
     [ProvideAutoLoad(UIContextGuids.SolutionExists, PackageAutoLoadFlags.BackgroundLoad)]
     [ProvideMenuResource("Menus.ctmenu", 1)]
-    [ProvideToolWindow(typeof(SearchWindow))]
-    [ProvideService(typeof(SSearchService), IsAsyncQueryable = true)]
     [ProvideOptionPage(typeof(OptionPageHandyTools), "HandyTools", "General", 0, 0, true)]
-    public sealed class HandyToolsPackage : AsyncPackage
-    {
+    public sealed class HandyToolsPackage : ToolkitPackage
+	{
         /// <summary>
         /// HandyToolsPackage GUID string.
         /// </summary>
@@ -66,8 +65,8 @@ namespace HandyTools
         private SVsRunningDocumentTable runningDocumentTable_;
         private Microsoft.VisualStudio.OLE.Interop.IServiceProvider servicePorvider_;
         private RunningDocTableEvents runningDocTableEvents_;
-        private SolutionEvents solutionEvents_;
-        private ProjectItemsEvents projectItemsEvents_;
+        private EnvDTE.SolutionEvents solutionEvents_;
+        private EnvDTE.ProjectItemsEvents projectItemsEvents_;
         private SettingFile fileSettings_ = new SettingFile();
 
         /// <summary>
@@ -82,8 +81,9 @@ namespace HandyTools
             // When initialized asynchronously, the current thread may be a background thread at this point.
             // Do any initialization that requires the UI thread after switching to the UI thread.
             await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
-            await SearchWindowCommand.InitializeAsync(this);
-            package_ = new WeakReference<HandyToolsPackage>(this);
+            await this.RegisterCommandsAsync();
+
+			package_ = new WeakReference<HandyToolsPackage>(this);
             dte2_ = await GetServiceAsync(typeof(EnvDTE.DTE)) as EnvDTE80.DTE2;
             servicePorvider_ = await GetServiceAsync(typeof(Microsoft.VisualStudio.OLE.Interop.IServiceProvider)) as Microsoft.VisualStudio.OLE.Interop.IServiceProvider;
 
@@ -97,29 +97,10 @@ namespace HandyTools
             projectItemsEvents_.ItemAdded += OnProjectItemChanged;
             projectItemsEvents_.ItemRemoved += OnProjectItemChanged;
             projectItemsEvents_.ItemRenamed += OnProjectItemRenamed;
-            AddService(typeof(SSearchService), CreateSearchServiceAsync);
-
-            OptionPageHandyTools options = Options;
-            if(null != options && options.EnableSearch) {
-                ISearchService service = await GetServiceAsync(typeof(SSearchService)) as ISearchService;
-                if(null != service){
-                    var _ = service.UpdateAsync();
-                }
-            }
         }
 
         private void OnSolutionOpened()
         {
-            OptionPageHandyTools options = Options;
-            if(null == options || !options.EnableSearch) {
-                return;
-            }
-            JoinableTaskFactory.Run(async () => {
-                ISearchService service = await GetServiceAsync(typeof(SSearchService)) as ISearchService;
-                if(null != service) {
-                    var _ = service.UpdateAsync();
-                }
-            });
         }
 
         private void OnProjectItemChanged(ProjectItem projectItem)
@@ -128,17 +109,6 @@ namespace HandyTools
 
         private void OnProjectItemRenamed(ProjectItem projectItem, string oldName)
         {
-
-        }
-
-        private async Task<object> CreateSearchServiceAsync(IAsyncServiceContainer container, CancellationToken cancellationToken, Type serviceType)
-        {
-            if(typeof(SSearchService) != serviceType) {
-                return null;
-            }
-            SearchService service = new SearchService(this);
-            await service.InitializeAsync(cancellationToken);
-            return service;
         }
         #endregion
     }

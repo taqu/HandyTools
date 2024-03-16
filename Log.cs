@@ -1,4 +1,4 @@
-﻿using EnvDTE;
+using EnvDTE;
 using EnvDTE80;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -25,11 +25,12 @@ namespace HandyTools
             Trace.Write(message);
         }
 
-        /// <summary>
-        /// Print a message to the editor's output
-        /// </summary>
-        public static async Task OutputAsync(string message)
+		/// <summary>
+		/// Print a message to the editor's output
+		/// </summary>
+		public static async Task OutputAsync(string message)
         {
+#if DEBUG
             await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             DTE2 dte2 = Microsoft.VisualStudio.Shell.Package.GetGlobalService(typeof(DTE)) as DTE2;
             EnvDTE.OutputWindow outputWindow = dte2.ToolWindows.OutputWindow;
@@ -40,6 +41,7 @@ namespace HandyTools
                 window.OutputString(message);
             }
             Trace.Write(message);
+#endif
         }
     }
 }
