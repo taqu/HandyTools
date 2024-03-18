@@ -15,7 +15,6 @@ namespace HandyTools.Options
         [Category("AI")]
         [DisplayName("AI API Type")]
         [Description("AI API Type")]
-        [DefaultValue(TypeAIAPI.OpenAI)]
         public TypeAIAPI APIType
         {
             get { return typeAIAPI_; }
@@ -25,7 +24,6 @@ namespace HandyTools.Options
         [Category("AI")]
         [DisplayName("AI Model")]
         [Description("AI Model for OpenAI API")]
-        [DefaultValue(TypeAIModel.GPT_3_5_Turbo)]
         public TypeAIModel AIModel
         {
             get { return typeAIModel_; }
@@ -35,7 +33,6 @@ namespace HandyTools.Options
         [Category("AI")]
         [DisplayName("AI Model Name")]
         [Description("AI Model Name for Ollama")]
-        [DefaultValue("llama2")]
         public string ModelName
         {
             get { return modelName_; }
@@ -45,7 +42,6 @@ namespace HandyTools.Options
         [Category("AI")]
         [DisplayName("AI API Key")]
         [Description("AI API Key for OpenAI API")]
-        [DefaultValue("")]
         public string ApiKey
         {
             get { return apiKey_; }
@@ -55,7 +51,6 @@ namespace HandyTools.Options
         [Category("AI")]
         [DisplayName("AI API Endpoint")]
         [Description("AI API Endpoint")]
-        [DefaultValue("")]
         public string ApiEndpoint
         {
             get { return apiEndpoint_; }
@@ -65,7 +60,6 @@ namespace HandyTools.Options
 		[Category("AI")]
 		[DisplayName("Format After Generation")]
 		[Description("Format After Generation")]
-		[DefaultValue(false)]
 		public bool FormatResponse
 		{
 			get { return formatResponse_; }
@@ -73,33 +67,30 @@ namespace HandyTools.Options
 		}
 
 		[Category("AI")]
-		[DisplayName("Prompt for Completion")]
-		[Description("Prompt for Completion")]
-		[DefaultValue("Please complete the next {filetype} code. Write only the code, not the explanation.\ncode:{content}")]
-		public string PromptCompletion 
-		{
-			get { return promptCompletion_; }
-			set { promptCompletion_ = value; }
-		}
-
-		[Category("AI")]
 		[DisplayName("Temperature")]
 		[Description("Temperature")]
-		[DefaultValue(0.1f)]
 		public float Temperature
 		{
 			get { return temperature_; }
 			set { temperature_ = value; }
 		}
 
-		private TypeAIAPI typeAIAPI_;
-        private TypeAIModel typeAIModel_;
-        private string modelName_;
-        private string apiKey_;
-        private string apiEndpoint_;
-        private bool formatResponse_;
-        private string promptCompletion_;
-        private float temperature_;
+		[Category("AI")]
+		[DisplayName("Prompt for Completion")]
+		[Description("Prompt for Completion")]
+		public string PromptCompletion 
+		{
+			get { return promptCompletion_; }
+			set { promptCompletion_ = value; }
+		}
 
+        private TypeAIAPI typeAIAPI_ = TypeAIAPI.OpenAI;
+        private TypeAIModel typeAIModel_ = TypeAIModel.GPT_3_5_Turbo;
+        private string modelName_ = "llama2";
+        private string apiKey_ = string.Empty;
+        private string apiEndpoint_ = string.Empty;
+        private bool formatResponse_ = false;
+		private float temperature_ = 0.1f;
+		private string promptCompletion_ = "Please complete the next {filetype} code. Write only the code, not the explanation.\ncode:{content}";
 	}
 }
