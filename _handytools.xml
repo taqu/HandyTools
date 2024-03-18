@@ -1,20 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <HandyTools>
-    <UnifyLineFeed>
-        <Code lang="C/C++">
-            LF
-        </Code>
-        <Code lang="CSharp">
-            CRLF
-        </Code>
-        <Code lang="Others">
-            LF
-        </Code>
-    </UnifyLineFeed>
-    <UnifyEncoding>
-        <Encoding>UTF8</Encoding>
-    </UnifyEncoding>
-    <Search>
-        <Enable>true</Enable>
-    </Search>
+	<UnifyLineFeed>
+		<Code lang="C/C++">
+			LF
+		</Code>
+		<Code lang="CSharp">
+			CRLF
+		</Code>
+		<Code lang="Others">
+			LF
+		</Code>
+	</UnifyLineFeed>
+	<UnifyEncoding>
+		<Encoding>UTF8</Encoding>
+	</UnifyEncoding>
+	<AI>
+		<!-- valid values: OpenAI or Ollama -->
+		<APIType>OpenAI</APIType>
+		<!-- valid values: gpt-3.5-turbo, gpt-3.5-turbo-16k, gpt-4-->
+		<AIModel>gpt-3.5-turbo</AIModel>
+		<ModelName>llama2</ModelName>
+		<ApiKey></ApiKey>
+		<ApiEndpoint>http://localhost:11434</ApiEndpoint>
+		<PromptCompletion>Please complete the next {filetype} code. Write only the code, not the explanation.\ncode:{content}</PromptCompletion>
+		<Temperature>0.1</Temperature>
+	</AI>
 </HandyTools>

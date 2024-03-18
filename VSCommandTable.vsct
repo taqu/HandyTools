@@ -1,26 +1,90 @@
 <?xml version="1.0" encoding="utf-8"?>
 <CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable" xmlns:xs="http://www.w3.org/2001/XMLSchema">
-	<Extern href="stdidcmd.h"/>
-	<Extern href="vsshlids.h"/>
-	<Include href="KnownImageIds.vsct"/>
-	<Include href="VSGlobals.vsct"/>
+    <Extern href="stdidcmd.h" />
+    <Extern href="vsshlids.h" />
+    <Include href="KnownImageIds.vsct" />
+    <Include href="VSGlobals.vsct" />
 
-	<Commands package="HandyTools">
-		<Buttons>
-			<Button guid="HandyTools" id="CommandCompletion" priority="0x0105" type="Button">
-				<Parent guid="VSMainMenu" id="View.DevWindowsGroup.OtherWindows.Group1"/>
-				<Icon guid="ImageCatalogGuid" id="StatusInformation" />
-				<CommandFlag>IconIsMoniker</CommandFlag>
-				<Strings>
-					<ButtonText>Runner Window</ButtonText>
-				</Strings>
-			</Button>
-		</Buttons>
-	</Commands>
+    <Commands package="HandyTools">
+        <Groups>
+            <Group guid="HandyTools" id="HandyTools_MenuGroup" />
+            <Group guid="HandyTools" id="HandyTools_CommandGroup" />
+            <Group guid="HandyTools" id="HandyTools_ViewCommandGroup" />
+        </Groups>
 
-	<Symbols>
-		<GuidSymbol name="HandyTools" value="{daafe9b8-3dc3-4cb6-a2ce-3959212fdc7c}">
-			<IDSymbol name="CommandCompletion" value="0x0000" />
-		</GuidSymbol>
-	</Symbols>
+        <Menus>
+            <Menu guid="HandyTools" id="HandyTools_Menu" type="Menu">
+                <Icon guid="ImageCatalogGuid" id="ToolBox" />
+                <CommandFlag>IconIsMoniker</CommandFlag>
+                <Strings>
+                    <ButtonText>Handy Tools</ButtonText>
+                </Strings>
+            </Menu>
+            <Menu guid="HandyTools" id="HandyTools_ViewMenu" type="Menu">
+                <Icon guid="ImageCatalogGuid" id="ToolBox" />
+                <CommandFlag>IconIsMoniker</CommandFlag>
+                <Strings>
+                    <ButtonText>Handy Tools</ButtonText>
+                </Strings>
+            </Menu>
+        </Menus>
+
+        <Buttons>
+            <Button guid="HandyTools" id="CommandCompletion" priority="0x0100" type="Button">
+                <!-- guid="VSMainMenu" id="View.DevWindowsGroup.OtherWindows.Group1"/> -->
+                <Icon guid="ImageCatalogGuid" id="ToolBox" />
+                <CommandFlag>IconIsMoniker</CommandFlag>
+                <Strings>
+                    <ButtonText>Completion</ButtonText>
+                </Strings>
+            </Button>
+            <Button guid="HandyTools" id="CommandShowChatWindow" priority="0x0100" type="Button">
+                <Icon guid="ImageCatalogGuid" id="ToolWindow" />
+                <CommandFlag>IconIsMoniker</CommandFlag>
+                <Strings>
+                    <ButtonText>Chat Window</ButtonText>
+                </Strings>
+            </Button>
+        </Buttons>
+    </Commands>
+
+    <CommandPlacements>
+        <CommandPlacement guid="HandyTools" id="HandyTools_MenuGroup" priority="0x0100">
+            <!-- <Parent guid="VSMainMenu" id="CodeWindow"/> -->
+            <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_CODEWIN" />
+        </CommandPlacement>
+        <CommandPlacement guid="HandyTools" id="HandyTools_Menu" priority="0x0100">
+            <Parent guid="HandyTools" id="HandyTools_MenuGroup" />
+        </CommandPlacement>
+        <CommandPlacement guid="HandyTools" id="HandyTools_CommandGroup" priority="0x0100">
+            <Parent guid="HandyTools" id="HandyTools_Menu" />
+        </CommandPlacement>
+        <CommandPlacement guid="HandyTools" id="CommandCompletion" priority="0x0000">
+            <Parent guid="HandyTools" id="HandyTools_CommandGroup" />
+        </CommandPlacement>
+
+        <CommandPlacement guid="HandyTools" id="HandyTools_ViewMenu" priority="0x0100">
+            <Parent guid="VSMainMenu" id="View.DevWindowsGroup.OtherWindows.Group1"/>
+        </CommandPlacement>
+        <CommandPlacement guid="HandyTools" id="HandyTools_ViewCommandGroup" priority="0x0100">
+            <Parent guid="HandyTools" id="HandyTools_ViewMenu" />
+        </CommandPlacement>
+        <CommandPlacement guid="HandyTools" id="CommandShowChatWindow" priority="0x0000">
+            <Parent guid="HandyTools" id="HandyTools_ViewCommandGroup" />
+        </CommandPlacement>
+    </CommandPlacements>
+
+    <Symbols>
+        <GuidSymbol name="HandyTools" value="{daafe9b8-3dc3-4cb6-a2ce-3959212fdc7c}">
+            <IDSymbol name="HandyTools_MenuGroup" value="0x1000" />
+            <IDSymbol name="HandyTools_CommandGroup" value="0x1001" />
+            <IDSymbol name="HandyTools_Menu" value="0x1002" />
+            <IDSymbol name="HandyTools_ViewMenuGroup" value="0x1003" />
+            <IDSymbol name="HandyTools_ViewCommandGroup" value="0x1004" />
+            <IDSymbol name="HandyTools_ViewMenu" value="0x1005" />
+
+            <IDSymbol name="CommandCompletion" value="0x0000" />
+            <IDSymbol name="CommandShowChatWindow" value="0x0001" />
+        </GuidSymbol>
+    </Symbols>
 </CommandTable>

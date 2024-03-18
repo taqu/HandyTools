@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 
 namespace HandyTools
 {
@@ -27,5 +27,25 @@ namespace HandyTools
             UTF8 =0,
             UTF8BOM,
         };
+
+        public enum TypeAIAPI
+        {
+            OpenAI = 0,
+            Ollama,
+        }
+
+        public enum TypeAIModel
+        {
+            GPT_3_5_Turbo =0, //gpt-3.5-turbo
+            GPT_3_5_Turbo_16k, //gpt-35-turbo-16k
+            GPT_4, //gpt-4
+        }
+
+        public enum TypeResponse
+        {
+            Append,
+            Replace,
+            Message,
+        }
     }
 }

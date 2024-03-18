@@ -30,7 +30,7 @@ namespace HandyTools
             encoding = Types.TypeEncoding.UTF8;
 
             //Load from a file
-            OptionPageHandyTools optionPage = package_.Options;
+            Options.OptionPageHandyTools optionPage = package_.Options;
             if(null == optionPage) {
                 return;
             }

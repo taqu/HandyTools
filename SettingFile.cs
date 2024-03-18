@@ -1,5 +1,7 @@
+using System.ComponentModel;
 using System.IO;
 using System.Xml;
+using static HandyTools.Types;
 
 namespace HandyTools
 {
@@ -14,7 +16,64 @@ namespace HandyTools
 
         public Types.TypeEncoding Encoding { get => encoding_; }
 
-        private XmlNode FindChild(XmlNode node, string name)
+        public TypeAIAPI APIType
+        {
+            get { return typeAIAPI_; }
+            set { typeAIAPI_ = value; }
+        }
+
+        public TypeAIModel AIModel
+        {
+            get { return typeAIModel_; }
+            set { typeAIModel_ = value; }
+        }
+
+        public string ModelName
+        {
+            get { return modelName_; }
+            set { modelName_ = value; }
+        }
+
+        public string ApiKey
+        {
+            get { return apiKey_; }
+            set { apiKey_ = value; }
+        }
+
+        public string ApiEndpoint
+        {
+            get { return apiEndpoint_; }
+            set { apiEndpoint_ = value; }
+        }
+
+		public bool FormatResponse
+		{
+			get { return formatResponse_; }
+			set { formatResponse_ = value; }
+		}
+
+		public string PromptCompletion
+		{
+			get { return promptCompletion_; }
+			set { promptCompletion_ = value; }
+		}
+
+        public float Temperature
+        {
+            get { return temperature_; }
+            set { temperature_ = value;}
+        }
+
+		private TypeAIAPI typeAIAPI_;
+        private TypeAIModel typeAIModel_;
+        private string modelName_ = string.Empty;
+        private string apiKey_ = string.Empty;
+        private string apiEndpoint_= string.Empty;
+		private bool formatResponse_ = false;
+		private string promptCompletion_ = string.Empty;
+        private float temperature_ = 0.1f;
+
+		private XmlNode FindChild(XmlNode node, string name)
         {
             foreach(XmlNode child in node.ChildNodes) {
                 if(child.Name == name) {
@@ -24,28 +83,27 @@ namespace HandyTools
             return null;
         }
 
-        /// <summary>
-        /// Search and load a setting file
-        /// </summary>
-        /// <param name="dte"></param>
-        /// <param name="documentPath"></param>
-        /// <returns></returns>
-        public bool Load(EnvDTE80.DTE2 dte, string documentPath)
+		/// <summary>
+		/// Search and load a setting file
+		/// </summary>
+		/// <param name="package"></param>
+		/// <param name="documentPath"></param>
+		/// <returns></returns>
+		public bool Load(WeakReference<HandyToolsPackage> package, string documentPath)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             string directoryPath = System.IO.Path.GetDirectoryName(documentPath);
             if(string.IsNullOrEmpty(directoryPath) || !System.IO.Directory.Exists(directoryPath)) {
-                return false;
+				SetFromSetting(package);
+				return false;
             }
             string filepath = string.Empty;
             if(!directoryToFile_.TryGetValue(directoryPath, out filepath) || !System.IO.File.Exists(filepath)) {
-                if(null == dte) {
-                    return false;
-                }
                 Log.Output(string.Format("search from {0}\n", directoryPath));
                 filepath = FindFile(directoryPath);
                 if(string.IsNullOrEmpty(filepath) || !System.IO.File.Exists(filepath)) {
-                    return false;
+					SetFromSetting(package);
+					return false;
                 }
                 AddToCache(directoryPath, filepath);
             }
@@ -121,6 +179,7 @@ namespace HandyTools
                     }
                 } //if(null != node){
 
+                // Unify Encoding
                 node = FindChild(root, "UnifyEncoding");
                 if(null != node) {
                     Log.Output("ReadEncoding\n");
@@ -143,6 +202,79 @@ namespace HandyTools
                         break;
                     }
                 }
+
+                // AI settings
+                node = FindChild(root, "AI");
+                if(null != node) {
+                    Log.Output("Read AI settings\n");
+                    foreach (XmlNode child in node.ChildNodes)
+                    {
+                        switch (child.Name)
+                        {
+                        case "APIType":
+                        {
+                            string type = child.InnerText.Trim();
+                            switch (type)
+                            {
+                            case "OpenAI":
+                                APIType = TypeAIAPI.OpenAI;
+                                break;
+                            case "Ollama":
+                                APIType = TypeAIAPI.Ollama;
+                                break;
+                            default:
+                                continue;
+                            }
+                        }
+                        break;
+                        case "AIModel":
+                        {
+                            string model = child.InnerText.Trim();
+                            switch (model)
+                            {
+                            case "gpt-3.5-turbo":
+                                AIModel = TypeAIModel.GPT_3_5_Turbo;
+                                break;
+                            case "gpt-35-turbo-16k":
+                                AIModel = TypeAIModel.GPT_3_5_Turbo_16k;
+                                break;
+                            case "gpt-4":
+                                AIModel = TypeAIModel.GPT_4;
+                                break;
+                            default:
+                                continue;
+                            }
+                        }
+                            break;
+                        case "ModelName":
+                            ModelName = child.InnerText.Trim();
+                        break;
+                        case "ApiKey":
+                            ApiKey = child.InnerText.Trim();
+                        break;
+                        case "ApiEndpoint":
+                            ApiEndpoint = child.InnerText.Trim();
+                        break;
+							case "FormatResponse":
+                                {
+                                    bool formatResponse = false;
+                                    bool.TryParse(child.InnerText.Trim().ToLower(), out formatResponse);
+                                    FormatResponse = formatResponse;
+                                }
+								break;
+							case "PromptCompletion":
+								PromptCompletion = child.InnerText.Trim();
+								break;
+							case "Temperature":
+								{
+                                    float temperature = 0.0f;
+									float.TryParse(child.InnerText.Trim().ToLower(), out temperature);
+									Temperature = temperature;
+								}
+								break;
+						}
+                    }
+                }
                 lineFeeds_ = lineFeeds;
                 encoding_ = codeEncoding;
                 lastWriteTime_ = lastWriteTime;
@@ -156,8 +288,8 @@ namespace HandyTools
 #else
             } catch {
 #endif
-
-                return false;
+                SetFromSetting(package);
+				return false;
             }
 
             return true;
@@ -192,7 +324,7 @@ namespace HandyTools
             }
             if(MaxCaches <= directoryToFile_.Count) {
                 System.Random random = new Random();
-                for(int i = 0; i < 64; ++i) {
+                for(int i = 0; i < (MaxCaches/2); ++i) {
                     RemoveFromCache(random.Next() % directoryToFile_.Count);
                 }
             }
@@ -211,8 +343,36 @@ namespace HandyTools
             }
         }
 
+        private void SetFromSetting(WeakReference<HandyToolsPackage> package_)
+        {
+			HandyToolsPackage package;
+			if (!package_.TryGetTarget(out package))
+			{
+                return;
+			}
+			Options.OptionPageHandyTools optionPage = package.Options;
+			if (null != optionPage)
+			{
+                lineFeeds_[(int)TypeLanguage.C_Cpp] = optionPage.LineFeedCpp;
+				lineFeeds_[(int)TypeLanguage.CSharp] = optionPage.LineFeedCSharp;
+				lineFeeds_[(int)TypeLanguage.C_Cpp] = optionPage.LineFeedOthers;
+                encoding_ = optionPage.Encoding;
+			}
+			Options.OptionPageHandyToolsAI optionPageAI = package.AIOptions;
+			if (null != optionPageAI)
+			{
+				APIType = optionPageAI.APIType;
+				AIModel = optionPageAI.AIModel;
+				ModelName = optionPageAI.ModelName;
+				ApiKey = optionPageAI.ApiKey;
+				ApiEndpoint = optionPageAI.ApiEndpoint;
+                FormatResponse = optionPageAI.FormatResponse;
+                PromptCompletion = optionPageAI.PromptCompletion;
+			}
+		}
+
         private static readonly string[] RootDirectories = new string[] { ".git", ".svn" };
-        private const int MaxCaches = 128;
+        private const int MaxCaches = 32;
 
         private Types.TypeLineFeed[] lineFeeds_ = new Types.TypeLineFeed[Types.NumLanguages] { Types.TypeLineFeed.LF, Types.TypeLineFeed.LF, Types.TypeLineFeed.LF };
         private Types.TypeEncoding encoding_ = Types.TypeEncoding.UTF8;

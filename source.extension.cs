@@ -13,6 +13,6 @@ namespace HandyTools
         public const string Language = "en-US";
         public const string Version = "0.4.0";
         public const string Author = "taqu29";
-        public const string Tags = "Encoding, UTF8, Line endings, CR, CRLF, LF";
+        public const string Tags = "Encoding,UTF8,Line endings,CR,CRLF,LF,AI";
     }
 }

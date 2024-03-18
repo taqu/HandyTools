@@ -55,8 +55,6 @@ An example setting file "_handytools.xml" is below,
 
 # ToDo
 
-- Merge full indexing search
-
 # License
 This software is distributed under two licenses 'The MIT License' or 'Public Domain', choose whichever you like.
 

@@ -8,8 +8,8 @@
         <License>LICENSE.txt</License>
         <GettingStartedGuide>GettingStartedGuide.txt</GettingStartedGuide>
         <ReleaseNotes>ReleaseNotes.txt</ReleaseNotes>
-        <Tags>Encoding, UTF8, Line endings, CR, CRLF, LF</Tags>
-        <Preview>true</Preview>
+        <Icon>Resources\Icon.ico</Icon>
+        <Tags>Encoding,UTF8,Line endings,CR,CRLF,LF,AI</Tags>
     </Metadata>
     <Installation>
         <InstallationTarget Id="Microsoft.VisualStudio.Pro" Version="[16.0,18.0)">

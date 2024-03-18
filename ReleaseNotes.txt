@@ -1,5 +1,6 @@
 - v.0.5.0
   - Remove full-text search, because Visual Studio itself has integrated full-text search
+  - Add AI commands
 - v.0.4.0
   - Add a search window menu
 - v.0.3.0

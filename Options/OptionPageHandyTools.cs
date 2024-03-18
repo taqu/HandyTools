@@ -3,7 +3,7 @@ using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 
-namespace HandyTools
+namespace HandyTools.Options
 {
 	[ComVisible(true)]
 	public class OptionPageHandyTools : Microsoft.VisualStudio.Shell.DialogPage

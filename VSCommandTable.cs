@@ -21,5 +21,6 @@ namespace HandyTools
     internal sealed partial class PackageIds
     {
         public const int CommandCompletion = 0x0000;
+        public const int CommandShowChatWindow = 0x0001;
     }
 }
