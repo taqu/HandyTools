@@ -19,10 +19,15 @@
 		<APIType>OpenAI</APIType>
 		<!-- valid values: gpt-3.5-turbo, gpt-3.5-turbo-16k, gpt-4-->
 		<AIModel>gpt-3.5-turbo</AIModel>
-		<ModelName>llama2</ModelName>
-		<ApiKey></ApiKey>
+		<ModelGeneral>llama2</ModelGeneral>
+		<ModelGeneration>llama2</ModelGeneration>
+		<ModelTranslation>llama2</ModelTranslation>
+		<ApiKey>XXX</ApiKey>
 		<ApiEndpoint>http://localhost:11434</ApiEndpoint>
 		<PromptCompletion>Please complete the next {filetype} code. Write only the code, not the explanation.\ncode:{content}</PromptCompletion>
+		<PromptExplanation>Please explain the next {filetype} code.\ncode:{content}</PromptExplanation>
+		<PromptTranslation>Please translate in English\n\n{content}</PromptTranslation>
+		<PromptDocumentation>Create a doxygen comment for the following C++ Function. doxygen comment only\n\n{content}</PromptDocumentation>
 		<Temperature>0.1</Temperature>
 	</AI>
 </HandyTools>

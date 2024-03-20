@@ -18,6 +18,8 @@ namespace HandyTools.Models
             {
                 APIKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
             }
+			apiProvider_ = new OpenAiProvider(APIKey);
+#if false
             if (!string.IsNullOrEmpty(APIEndpoint))
             {
                 APIEndpoint = APIEndpoint.Trim();
@@ -30,6 +32,7 @@ namespace HandyTools.Models
             {
                 apiProvider_ = new OpenAiProvider(APIKey, APIEndpoint);
             }
+#endif
             switch (settingFile.AIModel)
             {
             case TypeAIModel.GPT_3_5_Turbo:

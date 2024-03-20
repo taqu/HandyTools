@@ -3,11 +3,15 @@ global using Microsoft.VisualStudio.Shell;
 global using System;
 global using Task = System.Threading.Tasks.Task;
 using EnvDTE;
+using EnvDTE80;
 using HandyTools.Models;
 using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio.TextManager.Interop;
 using System.IO.Packaging;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
+using static HandyTools.Types;
 
 namespace HandyTools
 {
@@ -82,17 +86,10 @@ namespace HandyTools
 			return LoadFileSettings(DTE.Solution.FullName);
 		}
 
-		public (ModelBase, SettingFile) GetAIModel()
+		public (ModelBase, SettingFile) GetAIModel(TypeOllamaModel type)
 		{
 			SettingFile settingFile = LoadFileSettings();
-			if (null != aiModel_ && settingFile.APIType != aiModel_.APIType)
-			{
-				aiModel_ = null;
-			}
-			if (null != aiModel_)
-			{
-				return (aiModel_, settingFile);
-			}
+			ModelBase aiModel = null;
 			switch (settingFile.APIType)
 			{
 				case Types.TypeAIAPI.OpenAI:
@@ -100,26 +97,33 @@ namespace HandyTools
 					{
 						return (null, settingFile);
 					}
-					aiModel_ = new ModelOpenAI(settingFile);
+					aiModel = new ModelOpenAI(settingFile);
 					break;
 				case Types.TypeAIAPI.Ollama:
-					aiModel_ = new ModelOllama(settingFile);
+					aiModel = new ModelOllama(settingFile, type);
 					break;
 				default:
 					return (null, settingFile);
 			}
-			return (aiModel_, settingFile);
+			return (aiModel, settingFile);
 		}
+
+		public async Task<SVsServiceProvider> GetServiceProviderAsync()
+		{
+			return await GetServiceAsync(typeof(SVsServiceProvider)) as SVsServiceProvider;
+		}
+
+		public IVsTextManager GetTextManager() {
+			return ToolkitPackage.GetGlobalService(typeof(SVsTextManager)) as IVsTextManager;
+				}
 
 		static private WeakReference<HandyToolsPackage> package_;
 		private EnvDTE80.DTE2 dte2_;
 		private SVsRunningDocumentTable runningDocumentTable_;
-		private Microsoft.VisualStudio.OLE.Interop.IServiceProvider servicePorvider_;
 		private RunningDocTableEvents runningDocTableEvents_;
 		private EnvDTE.SolutionEvents solutionEvents_;
 		private EnvDTE.ProjectItemsEvents projectItemsEvents_;
 		private SettingFile fileSettings_ = new SettingFile();
-		private ModelBase aiModel_;
 
 		/// <summary>
 		/// Initialization of the package; this method is called right after the package is sited, so this is the place
@@ -137,20 +141,21 @@ namespace HandyTools
 			this.RegisterToolWindows();
 
 			package_ = new WeakReference<HandyToolsPackage>(this);
-			dte2_ = await GetServiceAsync(typeof(EnvDTE.DTE)) as EnvDTE80.DTE2;
-			servicePorvider_ = await GetServiceAsync(typeof(Microsoft.VisualStudio.OLE.Interop.IServiceProvider)) as Microsoft.VisualStudio.OLE.Interop.IServiceProvider;
 
 			runningDocumentTable_ = await GetServiceAsync(typeof(SVsRunningDocumentTable)) as SVsRunningDocumentTable;
 			runningDocTableEvents_ = new RunningDocTableEvents(this);
 
-			solutionEvents_ = dte2_.Events.SolutionEvents;
-			//solutionEvents_.Opened += OnSolutionOpened;
+			dte2_ = await GetServiceAsync(typeof(EnvDTE.DTE)) as EnvDTE80.DTE2;
+			if (null != dte2_)
+			{
+				solutionEvents_ = dte2_.Events.SolutionEvents;
+				//solutionEvents_.Opened += OnSolutionOpened;
 
-			projectItemsEvents_ = dte2_.Events.SolutionItemsEvents;
-			//projectItemsEvents_.ItemAdded += OnProjectItemChanged;
-			//projectItemsEvents_.ItemRemoved += OnProjectItemChanged;
-			//projectItemsEvents_.ItemRenamed += OnProjectItemRenamed;
-
+				projectItemsEvents_ = dte2_.Events.SolutionItemsEvents;
+				//projectItemsEvents_.ItemAdded += OnProjectItemChanged;
+				//projectItemsEvents_.ItemRemoved += OnProjectItemChanged;
+				//projectItemsEvents_.ItemRenamed += OnProjectItemRenamed;
+			}
 		}
 
 		//private void OnSolutionOpened()

@@ -16,35 +16,12 @@ namespace HandyTools.ToolWindows
         {
             this.InitializeComponent();
         }
-
-        /// <summary>
-        /// </summary>
-        /// <param name="sender">The event sender.</param>
-        /// <param name="e">The event args.</param>
-        private async void SendButton_OnClick(object sender, RoutedEventArgs e)
+        public string Output
         {
-            if (string.IsNullOrEmpty(InputTextBox.Text))
+            set
             {
-                return;
-            }
-            HandyToolsPackage package;
-            if(!HandyToolsPackage.Package.TryGetTarget(out package))
-            {
-                return;
-            }
-            (Models.ModelBase model, SettingFile settingFile) = package.GetAIModel();
-            if(null == model)
-            {
-                return;
-            }
-            try
-            {
-                string response = await model.CompletionAsync(InputTextBox.Text);
-                OutputTextBox.Text = response;
-            }catch (Exception ex)
-            {
-                OutputTextBox.Text = ex.Message;
-            }
+				OutputTextBox.Text = value;
+			}
         }
-    }
+	}
 }

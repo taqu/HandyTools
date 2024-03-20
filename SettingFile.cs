@@ -28,13 +28,25 @@ namespace HandyTools
             set { typeAIModel_ = value; }
         }
 
-        public string ModelName
+		public string ModelGeneral
+		{
+			get { return modelGeneral_; }
+			set { modelGeneral_ = value; }
+		}
+
+		public string ModelGeneration
         {
-            get { return modelName_; }
-            set { modelName_ = value; }
+            get { return modelGeneration_; }
+            set { modelGeneration_ = value; }
         }
 
-        public string ApiKey
+		public string ModelTranslation
+		{
+			get { return modelTranslation_; }
+			set { modelTranslation_ = value; }
+		}
+
+		public string ApiKey
         {
             get { return apiKey_; }
             set { apiKey_ = value; }
@@ -52,26 +64,63 @@ namespace HandyTools
 			set { formatResponse_ = value; }
 		}
 
-		public string PromptCompletion
-		{
-			get { return promptCompletion_; }
-			set { promptCompletion_ = value; }
-		}
-
         public float Temperature
         {
             get { return temperature_; }
             set { temperature_ = value;}
         }
 
+		public int MaxTextLength
+		{
+			get { return maxTextLength_; }
+			set { maxTextLength_ = value; }
+		}
+
+		public int Timeout
+		{
+			get { return timeout_; }
+			set { timeout_ = value; }
+		}
+
+		public string PromptCompletion
+		{
+			get { return promptCompletion_; }
+			set { promptCompletion_ = value; }
+		}
+
+		public string PromptExplanation
+		{
+			get { return promptExplanation_; }
+			set { promptExplanation_ = value; }
+		}
+
+		public string PromptTranslation
+		{
+			get { return promptTranslation_; }
+			set { promptTranslation_ = value; }
+		}
+
+		public string PromptDocumentation
+		{
+			get { return promptDocumentation_; }
+			set { promptDocumentation_ = value; }
+		}
+
 		private TypeAIAPI typeAIAPI_;
         private TypeAIModel typeAIModel_;
-        private string modelName_ = string.Empty;
-        private string apiKey_ = string.Empty;
+        private string modelGeneral_ = "llama2";
+		private string modelGeneration_ = "llama2";
+		private string modelTranslation_ = "llama2";
+		private string apiKey_ = string.Empty;
         private string apiEndpoint_= string.Empty;
 		private bool formatResponse_ = false;
-		private string promptCompletion_ = string.Empty;
         private float temperature_ = 0.1f;
+        private int maxTextLength_ = 4096;
+		private int timeout_ = 30;
+		private string promptCompletion_ = DefaultPrompts.PromptCompletion;
+        private string promptExplanation_ = DefaultPrompts.PromptExplanation;
+        private string promptTranslation_ = DefaultPrompts.PromptTranslation;
+        private string promptDocumentation_ = DefaultPrompts.PromptDocumentation;
 
 		private XmlNode FindChild(XmlNode node, string name)
         {
@@ -246,10 +295,16 @@ namespace HandyTools
                             }
                         }
                             break;
-                        case "ModelName":
-                            ModelName = child.InnerText.Trim();
+                        case "ModelGeneral":
+                            ModelGeneral = child.InnerText.Trim();
                         break;
-                        case "ApiKey":
+							case "ModelGeneration":
+								ModelGeneration = child.InnerText.Trim();
+								break;
+							case "ModelTranslation":
+								ModelTranslation = child.InnerText.Trim();
+								break;
+							case "ApiKey":
                             ApiKey = child.InnerText.Trim();
                         break;
                         case "ApiEndpoint":
@@ -262,15 +317,38 @@ namespace HandyTools
                                     FormatResponse = formatResponse;
                                 }
 								break;
-							case "PromptCompletion":
-								PromptCompletion = child.InnerText.Trim();
-								break;
 							case "Temperature":
 								{
-                                    float temperature = 0.0f;
+									float temperature = 0.0f;
 									float.TryParse(child.InnerText.Trim().ToLower(), out temperature);
 									Temperature = temperature;
 								}
+								break;
+							case "MaxTextLength":
+								{
+									int maxTextLength = 0;
+									int.TryParse(child.InnerText.Trim().ToLower(), out maxTextLength);
+									MaxTextLength = maxTextLength;
+								}
+								break;
+							case "Timeout":
+								{
+									int timeout = 0;
+									int.TryParse(child.InnerText.Trim().ToLower(), out timeout);
+									Timeout = timeout;
+								}
+								break;
+							case "PromptCompletion":
+								PromptCompletion = ParseLineFeeds(child.InnerText.Trim());
+								break;
+							case "PromptExplanation":
+								PromptExplanation = ParseLineFeeds(child.InnerText.Trim());
+								break;
+							case "PromptTranslation":
+								PromptTranslation = ParseLineFeeds(child.InnerText.Trim());
+								break;
+							case "PromptDocumentation":
+								PromptDocumentation = ParseLineFeeds(child.InnerText.Trim());
 								break;
 						}
                     }
@@ -363,12 +441,31 @@ namespace HandyTools
 			{
 				APIType = optionPageAI.APIType;
 				AIModel = optionPageAI.AIModel;
-				ModelName = optionPageAI.ModelName;
+				ModelGeneral = optionPageAI.ModelGeneral;
+				ModelGeneration = optionPageAI.ModelGeneration;
+				ModelTranslation = optionPageAI.ModelTranslation;
 				ApiKey = optionPageAI.ApiKey;
 				ApiEndpoint = optionPageAI.ApiEndpoint;
                 FormatResponse = optionPageAI.FormatResponse;
-                PromptCompletion = optionPageAI.PromptCompletion;
+                Temperature = optionPageAI.Temperature;
+                MaxTextLength = optionPageAI.MaxTextLength;
+				Timeout = optionPageAI.Timeout;
+				PromptCompletion = optionPageAI.PromptCompletion;
+				PromptExplanation = optionPageAI.PromptExplanation;
+				PromptTranslation = optionPageAI.PromptTranslation;
 			}
+		}
+
+        private string ParseLineFeeds(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return text;
+            }
+            text = text.Replace("\\r\\n", "\n");
+			text = text.Replace("\\r", "\n");
+			text = text.Replace("\\n", "\n");
+            return text;
 		}
 
         private static readonly string[] RootDirectories = new string[] { ".git", ".svn" };

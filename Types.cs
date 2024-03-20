@@ -43,9 +43,16 @@ namespace HandyTools
 
         public enum TypeResponse
         {
-            Append,
+            Append = 0,
             Replace,
             Message,
+        }
+
+        public enum  TypeOllamaModel
+        {
+            General=0,
+            Generation,
+            Translation,
         }
     }
 }
