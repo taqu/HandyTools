@@ -1,14 +1,8 @@
 using EnvDTE;
-using HandyTools.ToolWindows;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TaskStatusCenter;
 using Microsoft.VisualStudio.Text;
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static HandyTools.Types;
 
 namespace HandyTools.Commands
 {
@@ -18,7 +12,6 @@ namespace HandyTools.Commands
 		protected override void Initialize()
 		{
 			OllamaModel = Types.TypeOllamaModel.General;
-			ExtractOneLine = false;
 		}
 
 		protected override void BeforeRun(SettingFile settingFile)
@@ -70,6 +63,7 @@ namespace HandyTools.Commands
 			string definitionCode = await CodeUtil.GetDefinitionCodeAsync();
 			if (string.IsNullOrEmpty(definitionCode))
 			{
+				await VS.StatusBar.ShowMessageAsync("Documentation needs definition codes.");
 				throw new Exception("Documentation needs definition codes.");
 			}
 			DocumentView documentView = await VS.Documents.GetActiveDocumentViewAsync();
@@ -92,7 +86,14 @@ namespace HandyTools.Commands
 			}
 			catch (Exception ex)
 			{
+				await VS.StatusBar.ShowMessageAsync(ex.Message);
 				throw ex;
+			}
+			response = CodeUtil.ExtractDoxygenComment(response);
+			if(string.IsNullOrEmpty(response))
+			{
+				await VS.StatusBar.ShowMessageAsync("AI response is not appropriate.");
+				throw new Exception("AI response is not appropriate.");
 			}
 
 			SnapshotSpan selection = documentView.TextView.Selection.SelectedSpans.FirstOrDefault();

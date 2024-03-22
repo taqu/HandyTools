@@ -1,23 +1,7 @@
 using EnvDTE;
-using Microsoft.VisualStudio.TextManager.Interop;
-using Microsoft.VisualStudio;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.VisualStudio.TaskStatusCenter;
-using Microsoft.VisualStudio.Text.Editor;
-using EnvDTE80;
-using Microsoft.VisualStudio.Shell.Interop;
-using System.Windows.Media.TextFormatting;
-using Microsoft.VisualStudio.VCCodeModel;
-using System.Net;
-using Microsoft.VisualStudio.Text;
-using Microsoft.VisualStudio.OLE.Interop;
 using HandyTools.ToolWindows;
-using static HandyTools.Types;
-using static System.Net.Mime.MediaTypeNames;
+using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio.TaskStatusCenter;
 
 namespace HandyTools.Commands
 {
@@ -27,7 +11,6 @@ namespace HandyTools.Commands
 		protected override void Initialize()
 		{
 			OllamaModel = Types.TypeOllamaModel.General;
-			ExtractOneLine = false;
 		}
 
 		protected override void BeforeRun(SettingFile settingFile)
@@ -79,6 +62,7 @@ namespace HandyTools.Commands
 			string definitionCode = await CodeUtil.GetDefinitionCodeAsync();
 			if (string.IsNullOrEmpty(definitionCode))
 			{
+				await VS.StatusBar.ShowMessageAsync("Documentation needs definition codes.");
 				throw new Exception("Documentation needs definition codes.");
 			}
 			DocumentView documentView = await VS.Documents.GetActiveDocumentViewAsync();
@@ -106,9 +90,15 @@ namespace HandyTools.Commands
 			}
 			catch (Exception ex)
 			{
+				await VS.StatusBar.ShowMessageAsync(ex.Message);
 				throw ex;
 			}
-			response = StripResponseMarkdownCode(response);
+			response = CodeUtil.ExtractDoxygenComment(response);
+			if (string.IsNullOrEmpty(response))
+			{
+				await VS.StatusBar.ShowMessageAsync("AI response is not appropriate.");
+				throw new Exception("AI response is not appropriate.");
+			}
 			ToolWindowPane windowPane = await ToolWindowChat.ShowAsync();
 			ToolWindowChatControl windowControl = windowPane.Content as ToolWindowChatControl;
 			if (null != windowControl)

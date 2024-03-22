@@ -73,7 +73,8 @@ namespace HandyTools
 		public SettingFile LoadFileSettings(string documentPath)
 		{
 			Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-			return fileSettings_.Load(package_, documentPath) ? fileSettings_ : null;
+			fileSettings_.Load(package_, documentPath);
+			return fileSettings_;
 		}
 
 		public SettingFile LoadFileSettings()
@@ -89,7 +90,27 @@ namespace HandyTools
 		public (ModelBase, SettingFile) GetAIModel(TypeOllamaModel type)
 		{
 			SettingFile settingFile = LoadFileSettings();
-			ModelBase aiModel = null;
+            if (null != aiModel_)
+            {
+                switch (aiModel_.APIType)
+                {
+                case Types.TypeAIAPI.OpenAI:
+                    if (settingFile.APIType == Types.TypeAIAPI.OpenAI)
+                    {
+                        return (aiModel_, settingFile);
+                    }
+                    break;
+                case Types.TypeAIAPI.Ollama:
+                    if (settingFile.APIType == Types.TypeAIAPI.Ollama)
+                    {
+						(aiModel_ as ModelOllama).Model = settingFile.GetModelName(type);
+                        return (aiModel_, settingFile);
+                    }
+                    break;
+                default:
+                    return (null, settingFile);
+                }
+            }
 			switch (settingFile.APIType)
 			{
 				case Types.TypeAIAPI.OpenAI:
@@ -97,15 +118,15 @@ namespace HandyTools
 					{
 						return (null, settingFile);
 					}
-					aiModel = new ModelOpenAI(settingFile);
+					aiModel_ = new ModelOpenAI(settingFile);
 					break;
 				case Types.TypeAIAPI.Ollama:
-					aiModel = new ModelOllama(settingFile, type);
+					aiModel_ = new ModelOllama(settingFile, type);
 					break;
 				default:
 					return (null, settingFile);
 			}
-			return (aiModel, settingFile);
+			return (aiModel_, settingFile);
 		}
 
 		public async Task<SVsServiceProvider> GetServiceProviderAsync()
@@ -124,6 +145,7 @@ namespace HandyTools
 		private EnvDTE.SolutionEvents solutionEvents_;
 		private EnvDTE.ProjectItemsEvents projectItemsEvents_;
 		private SettingFile fileSettings_ = new SettingFile();
+		private ModelBase aiModel_;
 
 		/// <summary>
 		/// Initialization of the package; this method is called right after the package is sited, so this is the place

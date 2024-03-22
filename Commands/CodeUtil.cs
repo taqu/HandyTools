@@ -1,10 +1,7 @@
 using EnvDTE;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.VCCodeModel;
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace HandyTools.Commands
@@ -171,6 +168,26 @@ namespace HandyTools.Commands
 				return codeElement;
 			}
 			return null;
+		}
+
+		public static string ExtractDoxygenComment(string response)
+		{
+			int start;
+			start = response.IndexOf("/**");
+			if (start < 0)
+			{
+				start = response.IndexOf("/*!");
+			}
+			if (start < 0)
+			{
+				return string.Empty;
+			}
+			int end = response.IndexOf("*/", start);
+			if (end < 0)
+			{
+				return string.Empty;
+			}
+			return response.Substring(start, end-start+"*/".Length);
 		}
 	}
 }

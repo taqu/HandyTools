@@ -12,7 +12,6 @@ namespace HandyTools.Commands
 		protected override void Initialize()
 		{
 			OllamaModel = Types.TypeOllamaModel.Translation;
-			ExtractOneLine = false;
 		}
 
 		protected override void BeforeRun(SettingFile settingFile)

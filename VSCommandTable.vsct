@@ -48,7 +48,7 @@
 				<Icon guid="ImageCatalogGuid" id="Dictionary" />
 				<CommandFlag>IconIsMoniker</CommandFlag>
 				<Strings>
-					<ButtonText>Explain</ButtonText>
+					<ButtonText>Explain Function</ButtonText>
 				</Strings>
 			</Button>
 			<Button guid="HandyTools" id="CommandTranslation" priority="0x0002" type="Button">
@@ -62,21 +62,21 @@
 				<Icon guid="ImageCatalogGuid" id="TranslationView" />
 				<CommandFlag>IconIsMoniker</CommandFlag>
 				<Strings>
-					<ButtonText>Translate and Replace</ButtonText>
+					<ButtonText>Translate &amp; Replace</ButtonText>
 				</Strings>
 			</Button>
 			<Button guid="HandyTools" id="CommandAddDocument" priority="0x0004" type="Button">
 				<Icon guid="ImageCatalogGuid" id="AddComment" />
 				<CommandFlag>IconIsMoniker</CommandFlag>
 				<Strings>
-					<ButtonText>Add Document</ButtonText>
+					<ButtonText>Add Dxygen</ButtonText>
 				</Strings>
 			</Button>
 			<Button guid="HandyTools" id="CommandPreviewDocument" priority="0x0005" type="Button">
 				<Icon guid="ImageCatalogGuid" id="Comment" />
 				<CommandFlag>IconIsMoniker</CommandFlag>
 				<Strings>
-					<ButtonText>Preview Document</ButtonText>
+					<ButtonText>Preview Dxygen</ButtonText>
 				</Strings>
 			</Button>
 		</Buttons>

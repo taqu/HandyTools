@@ -12,7 +12,7 @@ namespace HandyTools.Commands
 		protected override void Initialize()
 		{
 			OllamaModel = Types.TypeOllamaModel.General;
-			ExtractOneLine = false;
+			ExtractDefinition = true;
 		}
 
 		protected override void BeforeRun(SettingFile settingFile)

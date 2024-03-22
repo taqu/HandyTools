@@ -1,6 +1,3 @@
-using Azure;
-using LangChain.Prompts;
-
 namespace HandyTools.Commands
 {
 	[Command(PackageGuids.HandyToolsString, PackageIds.CommandCompletion)]
@@ -9,7 +6,6 @@ namespace HandyTools.Commands
 		protected override void Initialize()
 		{
 			OllamaModel = Types.TypeOllamaModel.Generation;
-			ExtractOneLine = true;
 		}
 
 		protected override void BeforeRun(SettingFile settingFile)
