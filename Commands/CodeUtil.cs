@@ -1,7 +1,10 @@
+using Azure;
 using EnvDTE;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.VCCodeModel;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace HandyTools.Commands
@@ -33,13 +36,26 @@ namespace HandyTools.Commands
 			vsCMElement.vsCMElementVCBase,
 		};
 
-		public static async Task<string> GetDefinitionCodeAsync()
+		public static Types.TypeLanguage GetLanguageFromDocument(EnvDTE.Document document)
+		{
+            ThreadHelper.ThrowIfNotOnUIThread();
+            switch (document.Language) {
+            case "C/C++":
+                return Types.TypeLanguage.C_Cpp;
+            case "CSharp":
+                return Types.TypeLanguage.CSharp;
+            default:
+                return Types.TypeLanguage.Others;
+            }
+		}
+
+		public static async Task<(string, string)> GetDefinitionCodeAsync()
 		{
 			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 			HandyToolsPackage package;
 			if (!HandyToolsPackage.Package.TryGetTarget(out package))
 			{
-				return null;
+				return (null, null);
 			}
 
 			DocumentView documentView = await VS.Documents.GetActiveDocumentViewAsync();
@@ -56,19 +72,18 @@ namespace HandyTools.Commands
 			line = textBuffer.CurrentSnapshot.GetLineFromPosition(selection.Start.Position);
 			if (line.Length <= 0)
 			{
-				return null;
+				return (null, null);
 			}
 			ProjectItem projectItem = package.DTE.ActiveDocument.ProjectItem;
 			if (null == projectItem)
 			{
-				return null;
+				return (null, null);
 			}
 			FileCodeModel fileCodeModel = projectItem.FileCodeModel;
 			CodeElement codeElement = FindCodeElement(fileCodeModel.CodeElements, selection);
-			string lineString = line.GetText();
 			if (null == codeElement)
 			{
-				return null;
+				return (null, null);
 			}
 			else
 			{
@@ -83,15 +98,23 @@ namespace HandyTools.Commands
 				TextDocument textDocument = document.Object("TextDocument") as EnvDTE.TextDocument;
 				if (null == textDocument)
 				{
-					return null;
+					return (null, null);
 				}
 				EditPoint startPoint = textDocument.CreateEditPoint(codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDefinition));
 				string textCode = startPoint.GetText(codeFunction.get_EndPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDefinition));
-				if (needClose)
+				TextPoint declStartPoint = codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
+				string indent = string.Empty;
+                if (null != declStartPoint && 0<declStartPoint.LineCharOffset)
+                {
+                    EditPoint editPoint = declStartPoint.CreateEditPoint();
+                    string lineString = editPoint.GetLines(declStartPoint.Line, declStartPoint.Line + 1);
+					indent = lineString.Substring(0, declStartPoint.LineCharOffset-1);
+                }
+                if (needClose)
 				{
 					document.Close();
 				}
-				return textCode;
+				return (textCode, indent);
 			}
 		}
 
@@ -170,7 +193,43 @@ namespace HandyTools.Commands
 			return null;
 		}
 
-		public static string ExtractDoxygenComment(string response)
+		public static string AddIndent(string text, string indent, Types.TypeLineFeed typeLineFeed)
+		{
+			StringBuilder stringBuilder = new StringBuilder();
+			using(TextReader reader = new StringReader(text))
+			{
+				int count = 0;
+				while (true) {
+				string line = reader.ReadLine();
+					if(null == line)
+					{
+						break;
+					}
+					if (0 < count)
+					{
+                        switch (typeLineFeed)
+                        {
+                        case Types.TypeLineFeed.LF:
+                            stringBuilder.Append('\n');
+                            break;
+                        case Types.TypeLineFeed.CR:
+                            stringBuilder.Append('\r');
+                            break;
+                        case Types.TypeLineFeed.CRLF:
+                            stringBuilder.Append("\r\n");
+                            break;
+                        }
+                    }
+					++count;
+                    line = line.TrimStart();
+					stringBuilder.Append(indent);
+					stringBuilder.Append(line);
+				}
+			}
+			return stringBuilder.ToString();
+		}
+
+		public static string ExtractDoxygenComment(string response, string indent, Types.TypeLineFeed typeLineFeed)
 		{
 			int start;
 			start = response.IndexOf("/**");
@@ -187,7 +246,24 @@ namespace HandyTools.Commands
 			{
 				return string.Empty;
 			}
-			return response.Substring(start, end-start+"*/".Length);
+			return AddIndent(response.Substring(start, end-start+"*/".Length), indent, typeLineFeed);
+		}
+
+		private const string UnrealMacro0 = "UFUNCTION";
+		public static ITextSnapshotLine GetCommentInsertionLineFromPosition(DocumentView documentView, SnapshotSpan selection)
+		{
+			ITextBuffer textBuffer = documentView.TextView.TextBuffer;
+			ITextSnapshotLine line = textBuffer.CurrentSnapshot.GetLineFromPosition(selection.Start.Position);
+			if (line.LineNumber <= 0)
+			{
+				return line;
+			}
+			ITextSnapshotLine upperLine = textBuffer.CurrentSnapshot.GetLineFromLineNumber(line.LineNumber - 1);
+			if (upperLine.GetText().Contains(UnrealMacro0))
+			{
+				return upperLine;
+			}
+			return line;
 		}
 	}
 }

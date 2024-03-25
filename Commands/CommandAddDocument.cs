@@ -1,14 +1,18 @@
 using EnvDTE;
+using HandyTools.Models;
+using LangChain.Providers;
+using LangChain.Sources;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TaskStatusCenter;
 using Microsoft.VisualStudio.Text;
 using System.Linq;
+using static HandyTools.Types;
 
 namespace HandyTools.Commands
 {
 	[Command(PackageGuids.HandyToolsString, PackageIds.CommandAddDocument)]
 	internal sealed class CommandAddDocument : CommandAIBase<CommandAddDocument>
-	{
+    {
 		protected override void Initialize()
 		{
 			OllamaModel = Types.TypeOllamaModel.General;
@@ -21,82 +25,45 @@ namespace HandyTools.Commands
 			FormatResponse = settingFile.FormatResponse;
 		}
 
-		protected override async Task ExecuteAsync(OleMenuCmdEventArgs e)
+		protected override async Task RunTaskAsync(IVsThreadedWaitDialog4 waitDialog, RefCount<ModelBase> model, DocumentView documentView, SnapshotSpan selection)
 		{
-			HandyToolsPackage package;
-			if (!HandyToolsPackage.Package.TryGetTarget(out package))
-			{
-				return;
-			}
-			Initialize();
-			(Models.ModelBase model, SettingFile settingFile) = package.GetAIModel(OllamaModel);
-			if (null == model)
-			{
-				await VS.MessageBox.ShowAsync("Failed to load AI model. Please check settings.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
-				return;
-			}
-			MaxTextLength = settingFile.MaxTextLength;
-			BeforeRun(settingFile);
-
+			using IDisposable disposable = waitDialog as IDisposable;
 			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-			IVsTaskStatusCenterService taskStatusCenter = await VS.Services.GetTaskStatusCenterAsync();
-			TaskHandlerOptions options = default(TaskHandlerOptions);
-			options.Title = "Handy Tools AI";
-			options.ActionsAfterCompletion = CompletionActions.None;
+			waitDialog.UpdateProgress("In progress", "Handy Tools: 0/3 steps", "Handy Tools: 0/3 steps", 0, 3, true, out _);
 
-			TaskProgressData data = default;
-			data.ProgressText = "Chat Agent is typing ...";
-			data.CanBeCanceled = true;
-
-			ITaskHandler handler = taskStatusCenter.PreRegister(options, data);
-			Task task = RunTaskAsync(data, handler, model);
-			handler.RegisterTask(task);
-		}
-
-		protected override async Task RunTaskAsync(TaskProgressData data, ITaskHandler handler, Models.ModelBase model)
-		{
-			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-			data.PercentComplete = 0;
-			data.ProgressText = "Step 0 of 3 completed";
-			handler.Progress.Report(data);
-
-			string definitionCode = await CodeUtil.GetDefinitionCodeAsync();
+			(string definitionCode, string indent) = await CodeUtil.GetDefinitionCodeAsync();
 			if (string.IsNullOrEmpty(definitionCode))
 			{
+				model.Release();
 				await VS.StatusBar.ShowMessageAsync("Documentation needs definition codes.");
 				throw new Exception("Documentation needs definition codes.");
 			}
-			DocumentView documentView = await VS.Documents.GetActiveDocumentViewAsync();
 			string contentTypePrefix = documentView.TextView.TextDataModel.ContentType.DisplayName;
 			string prompt = PromptTemplate.Replace("{filetype}", contentTypePrefix);
 			prompt = PromptTemplate.Replace("{content}", definitionCode);
 
-			data.PercentComplete = 33;
-			data.ProgressText = "Step 1 of 3 completed";
-			handler.Progress.Report(data);
+			waitDialog.UpdateProgress("In progress", "Handy Tools: 1/3 steps", "Handy Tools: 1/3 steps", 1, 3, true, out _);
 			string response = string.Empty;
 			try
 			{
-				response = await model.CompletionAsync(prompt, handler.UserCancellation);
+				response = await model.Get().CompletionAsync(prompt);
 				response = PostProcessResponse(response);
 
-				data.PercentComplete = 66;
-				data.ProgressText = "Step 2 of 3 completed";
-				handler.Progress.Report(data);
+				waitDialog.UpdateProgress("In progress", "Handy Tools: 2/3 steps", "Handy Tools: 2/3 steps", 2, 3, true, out _);
 			}
 			catch (Exception ex)
 			{
+				model.Release();
 				await VS.StatusBar.ShowMessageAsync(ex.Message);
 				throw ex;
 			}
-			response = CodeUtil.ExtractDoxygenComment(response);
+			response = CodeUtil.ExtractDoxygenComment(response, indent, LineFeed);
 			if(string.IsNullOrEmpty(response))
 			{
 				await VS.StatusBar.ShowMessageAsync("AI response is not appropriate.");
 				throw new Exception("AI response is not appropriate.");
 			}
 
-			SnapshotSpan selection = documentView.TextView.Selection.SelectedSpans.FirstOrDefault();
 			ITextBuffer textBuffer = documentView.TextView.TextBuffer;
 			ITextSnapshotLine line = textBuffer.CurrentSnapshot.GetLineFromPosition(selection.Start.Position);
 			documentView.TextBuffer.Insert(line.Start, response + Environment.NewLine);
@@ -108,6 +75,8 @@ namespace HandyTools.Commands
 				documentView.TextView.Selection.Select(snapshotSpan, false);
 				(await VS.GetServiceAsync<DTE, DTE>()).ExecuteCommand("Edit.FormatSelection");
 			}
+			model.Release();
+			waitDialog.UpdateProgress("In progress", "Handy Tools: 3/3 steps", "Handy Tools: 3/3 steps", 3, 3, true, out _);
 		}
 	}
 }

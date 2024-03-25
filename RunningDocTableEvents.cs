@@ -5,6 +5,7 @@ using System.Linq;
 using EnvDTE;
 using System.IO;
 using System.Text;
+using HandyTools.Commands;
 
 namespace HandyTools
 {
@@ -182,18 +183,7 @@ namespace HandyTools
             }
 
             //Get the current language
-            Types.TypeLanguage language = Types.TypeLanguage.Others;
-            switch(document.Language) {
-            case "C/C++":
-                language = Types.TypeLanguage.C_Cpp;
-                break;
-            case "CSharp":
-                language = Types.TypeLanguage.CSharp;
-                break;
-            default:
-                language = Types.TypeLanguage.Others;
-                break;
-            }
+            Types.TypeLanguage language = CodeUtil.GetLanguageFromDocument(document);
 
             //Specify a target line-feed code
             LoadSettings(out var linefeed, language, out var encoding, document.Path);

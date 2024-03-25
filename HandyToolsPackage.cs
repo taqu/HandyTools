@@ -87,23 +87,30 @@ namespace HandyTools
 			return LoadFileSettings(DTE.Solution.FullName);
 		}
 
-		public (ModelBase, SettingFile) GetAIModel(TypeOllamaModel type)
+		public (RefCount<ModelBase>, SettingFile) GetAIModel(TypeOllamaModel type)
 		{
+			Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
 			SettingFile settingFile = LoadFileSettings();
             if (null != aiModel_)
             {
-                switch (aiModel_.APIType)
+				if (0<aiModel_.Count)
+				{
+					return (aiModel_, settingFile);
+				}
+                switch (aiModel_.Get().APIType)
                 {
                 case Types.TypeAIAPI.OpenAI:
                     if (settingFile.APIType == Types.TypeAIAPI.OpenAI)
                     {
+						aiModel_.AddRef();
                         return (aiModel_, settingFile);
                     }
                     break;
                 case Types.TypeAIAPI.Ollama:
                     if (settingFile.APIType == Types.TypeAIAPI.Ollama)
                     {
-						(aiModel_ as ModelOllama).Model = settingFile.GetModelName(type);
+						aiModel_.AddRef();
+						(aiModel_.Get() as ModelOllama).Model = settingFile.GetModelName(type);
                         return (aiModel_, settingFile);
                     }
                     break;
@@ -118,14 +125,15 @@ namespace HandyTools
 					{
 						return (null, settingFile);
 					}
-					aiModel_ = new ModelOpenAI(settingFile);
+					aiModel_ = new RefCount<ModelBase>(new ModelOpenAI(settingFile));
 					break;
 				case Types.TypeAIAPI.Ollama:
-					aiModel_ = new ModelOllama(settingFile, type);
+					aiModel_ = new RefCount<ModelBase>(new ModelOllama(settingFile, type));
 					break;
 				default:
 					return (null, settingFile);
 			}
+			aiModel_.AddRef();
 			return (aiModel_, settingFile);
 		}
 
@@ -145,7 +153,7 @@ namespace HandyTools
 		private EnvDTE.SolutionEvents solutionEvents_;
 		private EnvDTE.ProjectItemsEvents projectItemsEvents_;
 		private SettingFile fileSettings_ = new SettingFile();
-		private ModelBase aiModel_;
+		private RefCount<ModelBase> aiModel_;
 
 		/// <summary>
 		/// Initialization of the package; this method is called right after the package is sited, so this is the place

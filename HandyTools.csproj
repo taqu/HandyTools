@@ -57,6 +57,7 @@
     <Compile Include="Commands\CommandShowChatWindow.cs" />
     <Compile Include="Commands\CommandTranslateAndReplace.cs" />
     <Compile Include="Commands\CommandTranslation.cs" />
+    <Compile Include="Models\RefCount.cs" />
     <Compile Include="DefaultPrompts.cs" />
     <Compile Include="Log.cs" />
     <Compile Include="Models\ModelBase.cs" />
