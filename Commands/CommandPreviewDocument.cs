@@ -34,6 +34,7 @@ namespace HandyTools.Commands
 			if (string.IsNullOrEmpty(definitionCode))
 			{
 				model.Release();
+				waitDialog.EndWaitDialog();
 				await VS.MessageBox.ShowAsync("Documentation needs definition codes.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
 				throw new Exception("Documentation needs definition codes.");
 			}
@@ -58,6 +59,7 @@ namespace HandyTools.Commands
 			catch (Exception ex)
 			{
 				model.Release();
+				waitDialog.EndWaitDialog();
 				await VS.MessageBox.ShowAsync(ex.Message, buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
 				throw ex;
 			}
@@ -65,6 +67,7 @@ namespace HandyTools.Commands
 			if (string.IsNullOrEmpty(response))
 			{
 				model.Release();
+				waitDialog.EndWaitDialog();
 				await VS.MessageBox.ShowAsync("AI response is not appropriate.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
 				throw new Exception("AI response is not appropriate.");
 			}

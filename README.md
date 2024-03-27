@@ -13,6 +13,7 @@ Some tools for code editing.
 
 ## AI Features
 Just right click on the target code, and select command from Handy Tools submenu.
+![](./doc/AIMenu.jpg)
 
 | Command          | Place                 | Description                                                        |
 | :------          | :----                 | :----------                                                        |
@@ -23,6 +24,7 @@ Just right click on the target code, and select command from Handy Tools submenu
 |                  |                       | which the selection or one line is overlapping.                    |
 | Preview Doxygen  | Selection of one line | Preview Doxygen style document for a function on the chat view.    |
 
+*Notice: now supports only C/C++*
 
 ## Settings
 
@@ -41,6 +43,8 @@ Just right click on the target code, and select command from Handy Tools submenu
 |                 | Others             | Line feed for other text format | LF      |
 
 ### AI
+![](./doc/SettingsAI.jpg)
+
 | AI     | Item                    | Description                                                     | Default |
 | :---   | :---                    | :----------                                                     | :------ |
 | API    | API Endpoint            | Endpoint Address                                                | empty   |

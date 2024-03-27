@@ -22,8 +22,8 @@
 		<ModelTranslation>llama2</ModelTranslation>
 		<ApiKey>XXX</ApiKey>
 		<ApiEndpoint>http://localhost:11434</ApiEndpoint>
-		<PromptCompletion>Complete the next {filetype} code. Write only the code, not the explanation.\ncode:{content}</PromptCompletion>
-		<PromptExplanation>Explain the next {filetype} code.\ncode:{content}</PromptExplanation>
+		<PromptCompletion>Code it by use cases. Write only the code, not the explanation.\n\n{content}</PromptCompletion>
+		<PromptExplanation>Explain the next {filetype} code.\n\n{content}</PromptExplanation>
 		<PromptTranslation>Translate in English\n\n{content}</PromptTranslation>
 		<PromptDocumentation>Create a doxygen comment for the following C++ Function. doxygen comment only\n\n{content}</PromptDocumentation>
 		<Temperature>0.1</Temperature>

@@ -97,6 +97,7 @@ namespace HandyTools.Commands
 			if (string.IsNullOrEmpty(text))
 			{
 				model.Release();
+				waitDialog.EndWaitDialog();
 				await VS.MessageBox.ShowAsync("Please select text or not empty line.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
 				throw new Exception("Please select text or not empty line.");
 			}
@@ -122,6 +123,7 @@ namespace HandyTools.Commands
 			catch (Exception ex)
 			{
 				model.Release();
+				waitDialog.EndWaitDialog();
 				await VS.MessageBox.ShowAsync(ex.Message, buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
 				throw ex;
 			}
