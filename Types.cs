@@ -34,13 +34,6 @@ namespace HandyTools
             Ollama,
         }
 
-        public enum TypeAIModel
-        {
-            GPT_3_5_Turbo =0, //gpt-3.5-turbo
-            GPT_3_5_Turbo_16k, //gpt-35-turbo-16k
-            GPT_4, //gpt-4
-        }
-
         public enum TypeResponse
         {
             Append = 0,
@@ -48,7 +41,7 @@ namespace HandyTools
             Message,
         }
 
-        public enum  TypeOllamaModel
+        public enum  TypeModel
         {
             General=0,
             Generation,

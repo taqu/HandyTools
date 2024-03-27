@@ -11,7 +11,7 @@ namespace HandyTools.Commands
 	{
 		protected override void Initialize()
 		{
-			OllamaModel = Types.TypeOllamaModel.General;
+			Model = Types.TypeModel.General;
 			ExtractDefinition = true;
 		}
 

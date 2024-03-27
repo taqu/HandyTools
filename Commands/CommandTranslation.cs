@@ -5,7 +5,7 @@ namespace HandyTools.Commands
 	{
 		protected override void Initialize()
 		{
-			OllamaModel = Types.TypeOllamaModel.Translation;
+			Model = Types.TypeModel.Translation;
 		}
 
 		protected override void BeforeRun(SettingFile settingFile)

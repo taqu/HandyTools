@@ -1,8 +1,8 @@
-using LangChain.Providers;
-using LangChain.Providers.OpenAI;
-using LangChain.Providers.OpenAI.Predefined;
+using OpenAI_API;
+using OpenAI_API.Chat;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Documents;
 using static HandyTools.Types;
 
 namespace HandyTools.Models
@@ -10,7 +10,9 @@ namespace HandyTools.Models
     public class ModelOpenAI : ModelBase
     {
         public TypeAIAPI APIType => TypeAIAPI.OpenAI;
-        public ModelOpenAI(SettingFile settingFile)
+        public string Model { get { return model_; } set { model_ = value; } }
+
+        public ModelOpenAI(SettingFile settingFile, TypeModel requestType)
         {
             string APIKey = settingFile.ApiKey;
             string APIEndpoint = settingFile.ApiEndpoint;
@@ -18,48 +20,35 @@ namespace HandyTools.Models
             {
                 APIKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
             }
-			apiProvider_ = new OpenAiProvider(APIKey);
-#if false
             if (!string.IsNullOrEmpty(APIEndpoint))
             {
                 APIEndpoint = APIEndpoint.Trim();
+                APIEndpoint = APIEndpoint.TrimEnd('/');
             }
             if (string.IsNullOrEmpty(APIEndpoint))
             {
-				apiProvider_ = new OpenAiProvider(APIKey);
+                apiProvider_ = new OpenAIAPI(APIKey);
 			}
             else
             {
-                apiProvider_ = new OpenAiProvider(APIKey, APIEndpoint);
+                apiProvider_ = new OpenAIAPI(APIKey);
+                apiProvider_.ApiUrlFormat = APIEndpoint + "/{0}/{1}";
             }
-#endif
-            switch (settingFile.AIModel)
-            {
-            case TypeAIModel.GPT_3_5_Turbo:
-                model_ = new Gpt35TurboModel(apiProvider_);
-                break;
-            case TypeAIModel.GPT_3_5_Turbo_16k:
-                model_ = new Gpt35TurboModel(apiProvider_);
-                break;
-            case TypeAIModel.GPT_4:
-                model_ = new Gpt4Model(apiProvider_);
-                break;
-                default:
-                model_ = new Gpt35TurboModel(apiProvider_);
-                break;
-            }
-            settings_ = new OpenAiChatSettings() { Temperature = settingFile.Temperature };
-
+            model_ = settingFile.GetModelName(requestType);
 		}
 
-        public async Task<string> CompletionAsync(string userInput, CancellationToken cancellationToken = default)
+        public async Task<string> CompletionAsync(string userInput, float temperature, CancellationToken cancellationToken = default)
         {
-            ChatResponse response = await model_.GenerateAsync(userInput, settings_, cancellationToken);
+            ChatRequest chatRequest = new ChatRequest();
+            chatRequest.Model = model_;
+            chatRequest.Temperature = temperature;
+            chatRequest.Messages = new System.Collections.Generic.List<ChatMessage>();
+            chatRequest.Messages.Add(new ChatMessage(ChatMessageRole.User, userInput));
+            ChatResult response = await apiProvider_.Chat.CreateChatCompletionAsync(chatRequest);
             return response.ToString();
         }
 
-        private OpenAiChatSettings settings_;
-        private OpenAiProvider apiProvider_;
-        private OpenAiChatModel model_;
+        private OpenAIAPI apiProvider_;
+        private string model_;
     }
 }

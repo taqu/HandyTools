@@ -12,70 +12,61 @@ namespace HandyTools.Options
     [ComVisible(true)]
 	public class OptionPageHandyToolsAI : Microsoft.VisualStudio.Shell.DialogPage
     {
-        [Category("AI")]
-        [DisplayName("AI API Type")]
-        [Description("AI API Type")]
+        [Category("API")]
+        [DisplayName("API Type")]
+        [Description("API Type")]
         public TypeAIAPI APIType
         {
             get { return typeAIAPI_; }
             set { typeAIAPI_ = value; }
         }
 
-        [Category("AI")]
-        [DisplayName("AI Model")]
-        [Description("AI Model for OpenAI API")]
-        public TypeAIModel AIModel
-        {
-            get { return typeAIModel_; }
-            set { typeAIModel_ = value; }
-        }
-
-        [Category("AI")]
-        [DisplayName("AI Model Name")]
-        [Description("AI Model Name for Ollama")]
-        public string ModelGeneral
-        {
-            get { return modelGeneral_; }
-            set { modelGeneral_ = value; }
-        }
-
-		[Category("AI")]
-		[DisplayName("AI Generation Model Name")]
-		[Description("AI Model Name for Ollama, using when generating codes.")]
-		public string ModelGeneration
-		{
-			get { return modelGeneration_; }
-			set { modelGeneration_ = value; }
-		}
-
-		[Category("AI")]
-		[DisplayName("AI Translation Model Name")]
-		[Description("AI Model Name for Ollama, using when translating.")]
-		public string ModelTranslation
-		{
-			get { return modelTranslation_; }
-			set { modelTranslation_ = value; }
-		}
-
-		[Category("AI")]
-        [DisplayName("AI API Key")]
-        [Description("AI API Key for OpenAI API")]
+				[Category("API")]
+        [DisplayName("API Key")]
+        [Description("API Key for OpenAI API")]
         public string ApiKey
         {
             get { return apiKey_; }
             set { apiKey_ = value; }
         }
 
-        [Category("AI")]
-        [DisplayName("AI API Endpoint")]
-        [Description("AI API Endpoint")]
+        [Category("API")]
+        [DisplayName("API Endpoint")]
+        [Description("API Endpoint")]
         public string ApiEndpoint
         {
             get { return apiEndpoint_; }
             set { apiEndpoint_ = value; }
         }
 
-		[Category("AI")]
+        [Category("Model")]
+        [DisplayName("Model Name")]
+        [Description("Model Name for General Purpose")]
+        public string ModelGeneral
+        {
+            get { return modelGeneral_; }
+            set { modelGeneral_ = value; }
+        }
+
+		[Category("Model")]
+		[DisplayName("Generation Model Name")]
+		[Description("Model Name for Generation, using when generating codes.")]
+		public string ModelGeneration
+		{
+			get { return modelGeneration_; }
+			set { modelGeneration_ = value; }
+		}
+
+		[Category("Model")]
+		[DisplayName("Translation Model Name")]
+		[Description("Model Name for Translation, using when translating.")]
+		public string ModelTranslation
+		{
+			get { return modelTranslation_; }
+			set { modelTranslation_ = value; }
+		}
+
+		[Category("Model")]
 		[DisplayName("Format After Generation")]
 		[Description("Format After Generation")]
 		public bool FormatResponse
@@ -84,7 +75,7 @@ namespace HandyTools.Options
 			set { formatResponse_ = value; }
 		}
 
-		[Category("AI")]
+		[Category("Model")]
 		[DisplayName("Temperature")]
 		[Description("Temperature")]
 		public float Temperature
@@ -93,7 +84,7 @@ namespace HandyTools.Options
 			set { temperature_ = value; }
 		}
 
-		[Category("AI")]
+		[Category("Model")]
 		[DisplayName("Max Text Length")]
 		[Description("Max Text Length which is Sent to AI. Not Max Tokens.")]
 		public int MaxTextLength
@@ -102,7 +93,7 @@ namespace HandyTools.Options
 			set { maxTextLength_ = value; }
 		}
 
-		[Category("AI")]
+		[Category("Model")]
 		[DisplayName("Timeout")]
 		[Description("Timeout for interacting with AI in seconds.")]
 		public int Timeout
@@ -111,8 +102,8 @@ namespace HandyTools.Options
 			set { timeout_ = value; }
 		}
 
-		[Category("AI")]
-		[DisplayName("Prompt for Completion")]
+		[Category("Prompt")]
+		[DisplayName("Completion")]
 		[Description("Prompt for Completion")]
 		public string PromptCompletion 
 		{
@@ -120,8 +111,8 @@ namespace HandyTools.Options
 			set { promptCompletion_ = value; }
 		}
 
-		[Category("AI")]
-		[DisplayName("Prompt for Explanation")]
+		[Category("Prompt")]
+		[DisplayName("Explanation")]
 		[Description("Prompt for Explanation")]
 		public string PromptExplanation
 		{
@@ -129,8 +120,8 @@ namespace HandyTools.Options
 			set { promptExplanation_ = value; }
 		}
 
-		[Category("AI")]
-		[DisplayName("Prompt for Translation")]
+		[Category("Prompt")]
+		[DisplayName("Translation")]
 		[Description("Prompt for Translation")]
 		public string PromptTranslation
 		{
@@ -138,8 +129,8 @@ namespace HandyTools.Options
 			set { promptTranslation_ = value; }
 		}
 
-		[Category("AI")]
-		[DisplayName("Prompt for Documentation")]
+		[Category("Prompt")]
+		[DisplayName("Documentation")]
 		[Description("Prompt for Documentation")]
 		public string PromptDocumentation
 		{
@@ -148,7 +139,6 @@ namespace HandyTools.Options
 		}
 
 		private TypeAIAPI typeAIAPI_ = TypeAIAPI.OpenAI;
-        private TypeAIModel typeAIModel_ = TypeAIModel.GPT_3_5_Turbo;
         private string modelGeneral_ = "llama2";
 		private string modelGeneration_ = "llama2";
 		private string modelTranslation_ = "llama2";

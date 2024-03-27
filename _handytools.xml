@@ -16,9 +16,7 @@
 	</UnifyEncoding>
 	<AI>
 		<!-- valid values: OpenAI or Ollama -->
-		<APIType>OpenAI</APIType>
-		<!-- valid values: gpt-3.5-turbo, gpt-3.5-turbo-16k, gpt-4-->
-		<AIModel>gpt-3.5-turbo</AIModel>
+		<APIType>Ollama</APIType>
 		<ModelGeneral>llama2</ModelGeneral>
 		<ModelGeneration>llama2</ModelGeneration>
 		<ModelTranslation>llama2</ModelTranslation>
@@ -29,5 +27,6 @@
 		<PromptTranslation>Translate in English\n\n{content}</PromptTranslation>
 		<PromptDocumentation>Create a doxygen comment for the following C++ Function. doxygen comment only\n\n{content}</PromptDocumentation>
 		<Temperature>0.1</Temperature>
+        <MaxTextLength>4096</MaxTextLength>
 	</AI>
 </HandyTools>

@@ -22,12 +22,6 @@ namespace HandyTools
             set { typeAIAPI_ = value; }
         }
 
-        public TypeAIModel AIModel
-        {
-            get { return typeAIModel_; }
-            set { typeAIModel_ = value; }
-        }
-
         public string ModelGeneral
         {
             get { return modelGeneral_; }
@@ -106,15 +100,15 @@ namespace HandyTools
             set { promptDocumentation_ = value; }
         }
 
-        public string GetModelName(Types.TypeOllamaModel type)
+        public string GetModelName(Types.TypeModel type)
         {
             switch (type)
             {
-            case TypeOllamaModel.General:
+            case TypeModel.General:
                 return ModelGeneral;
-            case TypeOllamaModel.Generation:
+            case TypeModel.Generation:
                 return ModelGeneration;
-            case TypeOllamaModel.Translation:
+            case TypeModel.Translation:
                 return ModelTranslation;
             default:
                 return ModelGeneral;
@@ -122,7 +116,6 @@ namespace HandyTools
         }
 
         private TypeAIAPI typeAIAPI_;
-        private TypeAIModel typeAIModel_;
         private string modelGeneral_ = "llama2";
         private string modelGeneration_ = "llama2";
         private string modelTranslation_ = "llama2";
@@ -311,25 +304,6 @@ namespace HandyTools
                             }
                         }
                         break;
-                        case "AIModel":
-                        {
-                            string model = child.InnerText.Trim();
-                            switch (model)
-                            {
-                            case "gpt-3.5-turbo":
-                                AIModel = TypeAIModel.GPT_3_5_Turbo;
-                                break;
-                            case "gpt-35-turbo-16k":
-                                AIModel = TypeAIModel.GPT_3_5_Turbo_16k;
-                                break;
-                            case "gpt-4":
-                                AIModel = TypeAIModel.GPT_4;
-                                break;
-                            default:
-                                continue;
-                            }
-                        }
-                        break;
                         case "ModelGeneral":
                             ModelGeneral = child.InnerText.Trim();
                             break;
@@ -488,7 +462,6 @@ namespace HandyTools
             if (null != optionPageAI)
             {
                 APIType = optionPageAI.APIType;
-                AIModel = optionPageAI.AIModel;
                 ModelGeneral = optionPageAI.ModelGeneral;
                 ModelGeneration = optionPageAI.ModelGeneration;
                 ModelTranslation = optionPageAI.ModelTranslation;

@@ -1,4 +1,3 @@
-using LangChain.Providers;
 using OllamaAPI;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,7 +10,7 @@ namespace HandyTools.Models
         public TypeAIAPI APIType => TypeAIAPI.Ollama;
 		public string Model { get { return apiProvider_.Model; } set { apiProvider_.Model = value; } }
 
-		public ModelOllama(SettingFile settingFile, TypeOllamaModel requestType)
+		public ModelOllama(SettingFile settingFile, TypeModel requestType)
         {
 			string APIEndpoint = settingFile.ApiEndpoint;
 			if (!string.IsNullOrEmpty(APIEndpoint))
@@ -20,11 +19,11 @@ namespace HandyTools.Models
             }
 			apiProvider_ = new OllamaProvider(APIEndpoint, settingFile.GetModelName(requestType));
 			apiProvider_.Options = new OllamaAPI.Options();
-			apiProvider_.Options.temperature = settingFile.Temperature;
 		}
 
-        public async Task<string> CompletionAsync(string userInput, CancellationToken cancellationToken = default)
+        public async Task<string> CompletionAsync(string userInput, float temperature, CancellationToken cancellationToken = default)
         {
+			apiProvider_.Options.temperature = temperature;
 			return await apiProvider_.GenerateAsync(userInput, cancellationToken);
 		}
 		private OllamaProvider apiProvider_;

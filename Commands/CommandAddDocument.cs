@@ -1,12 +1,7 @@
 using EnvDTE;
 using HandyTools.Models;
-using LangChain.Providers;
-using LangChain.Sources;
 using Microsoft.VisualStudio.Shell.Interop;
-using Microsoft.VisualStudio.TaskStatusCenter;
 using Microsoft.VisualStudio.Text;
-using System.Linq;
-using static HandyTools.Types;
 
 namespace HandyTools.Commands
 {
@@ -15,7 +10,7 @@ namespace HandyTools.Commands
     {
 		protected override void Initialize()
 		{
-			OllamaModel = Types.TypeOllamaModel.General;
+			Model = Types.TypeModel.General;
 		}
 
 		protected override void BeforeRun(SettingFile settingFile)
@@ -35,7 +30,7 @@ namespace HandyTools.Commands
 			if (string.IsNullOrEmpty(definitionCode))
 			{
 				model.Release();
-				await VS.StatusBar.ShowMessageAsync("Documentation needs definition codes.");
+				await VS.MessageBox.ShowAsync("Documentation needs definition codes.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
 				throw new Exception("Documentation needs definition codes.");
 			}
 			string contentTypePrefix = documentView.TextView.TextDataModel.ContentType.DisplayName;
@@ -46,7 +41,7 @@ namespace HandyTools.Commands
 			string response = string.Empty;
 			try
 			{
-				response = await model.Get().CompletionAsync(prompt);
+				response = await model.Get().CompletionAsync(prompt, Temperature);
 				response = PostProcessResponse(response);
 
 				waitDialog.UpdateProgress("In progress", "Handy Tools: 2/3 steps", "Handy Tools: 2/3 steps", 2, 3, true, out _);
@@ -54,13 +49,14 @@ namespace HandyTools.Commands
 			catch (Exception ex)
 			{
 				model.Release();
-				await VS.StatusBar.ShowMessageAsync(ex.Message);
+				await VS.MessageBox.ShowAsync(ex.Message, buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
 				throw ex;
 			}
 			response = CodeUtil.ExtractDoxygenComment(response, indent, LineFeed);
 			if(string.IsNullOrEmpty(response))
 			{
-				await VS.StatusBar.ShowMessageAsync("AI response is not appropriate.");
+				model.Release();
+				await VS.MessageBox.ShowAsync("AI response is not appropriate.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
 				throw new Exception("AI response is not appropriate.");
 			}
 

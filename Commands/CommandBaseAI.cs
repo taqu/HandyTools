@@ -1,30 +1,24 @@
-using Azure;
-using Community.VisualStudio.Toolkit;
 using EnvDTE;
 using HandyTools.Models;
 using HandyTools.ToolWindows;
-using LangChain.Providers;
-using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.Shell.Interop;
-using Microsoft.VisualStudio.TaskStatusCenter;
 using Microsoft.VisualStudio.Text;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using System.Windows.Markup;
 using static HandyTools.Types;
 
 namespace HandyTools.Commands
 {
-	internal class CommandAIBase<T> : BaseCommand<T> where T : class, new()
+    internal class CommandAIBase<T> : BaseCommand<T> where T : class, new()
 	{
 		protected string PromptTemplate { get; set; } = string.Empty; //{filetype}: file type name, {content}: content text
 		protected TypeResponse Response { get; set; } = TypeResponse.Append;
 		protected int MaxTextLength { get; set; } = 4096;
 		protected bool FormatResponse { get; set; } = false;
 		protected bool ExtractDefinition { get; set; } = false;
-		protected TypeOllamaModel OllamaModel { get; set; } = TypeOllamaModel.General;
+		protected TypeModel Model { get; set; } = TypeModel.General;
 		protected TypeLineFeed LineFeed { get; set; }
+		protected float Temperature { get;set; } = 0.1f;
 
 		protected override async Task ExecuteAsync(OleMenuCmdEventArgs e)
 		{
@@ -34,19 +28,21 @@ namespace HandyTools.Commands
 				return;
 			}
 			Initialize();
-			(RefCount<ModelBase> model, SettingFile settingFile) = package.GetAIModel(OllamaModel);
+			(RefCount<ModelBase> model, SettingFile settingFile) = package.GetAIModel(Model);
 			if (null == model)
 			{
 				await VS.MessageBox.ShowAsync("Failed to load AI model. Please check settings.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
 				return;
 			}
-			if (0 < model.Count)
+			if (1 < model.Count)
 			{
+				model.Release();
 				await VS.MessageBox.ShowAsync("Handy Tools is already running.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
 				return;
 			}
 			MaxTextLength = settingFile.MaxTextLength;
 			LineFeed = settingFile.Get(CodeUtil.GetLanguageFromDocument(package.DTE.ActiveDocument));
+			Temperature = settingFile.Temperature;
 			BeforeRun(settingFile);
 			DocumentView documentView = await VS.Documents.GetActiveDocumentViewAsync();
 			SnapshotSpan selection = documentView.TextView.Selection.SelectedSpans.FirstOrDefault();
@@ -54,7 +50,7 @@ namespace HandyTools.Commands
 			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 			IVsThreadedWaitDialogFactory dialogFactory = (IVsThreadedWaitDialogFactory)await VS.Services.GetThreadedWaitDialogAsync();
 			IVsThreadedWaitDialog4 threadedWaitDialog = dialogFactory.CreateInstance();
-			threadedWaitDialog.StartWaitDialog("Handy Tools AI", "Chat Agent is working on it ...", "", null, "", 5, true, true);
+			threadedWaitDialog.StartWaitDialog("Handy Tools AI", "Chat Agent is working on it ...", "", null, "", 10, false, true);
 
 			Task task = RunTaskAsync(threadedWaitDialog, model, documentView, selection);
 		}
@@ -101,7 +97,7 @@ namespace HandyTools.Commands
 			if (string.IsNullOrEmpty(text))
 			{
 				model.Release();
-				await VS.StatusBar.ShowMessageAsync("Please select text or not empty line.");
+				await VS.MessageBox.ShowAsync("Please select text or not empty line.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
 				throw new Exception("Please select text or not empty line.");
 			}
 			int selectionStartLineNumber = documentView.TextView.TextBuffer.CurrentSnapshot.GetLineNumberFromPosition(selection.Start.Position);
@@ -118,7 +114,7 @@ namespace HandyTools.Commands
 			string response = string.Empty;
 			try
 			{
-				response = await model.Get().CompletionAsync(prompt);
+				response = await model.Get().CompletionAsync(prompt, Temperature);
 				response = PostProcessResponse(response);
 
 				waitDialog.UpdateProgress("In progress", "Handy Tools: 2/3 steps", "Handy Tools: 2/3 steps", 2, 3, true, out _);
@@ -126,7 +122,7 @@ namespace HandyTools.Commands
 			catch (Exception ex)
 			{
 				model.Release();
-				await VS.StatusBar.ShowMessageAsync(ex.Message);
+				await VS.MessageBox.ShowAsync(ex.Message, buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
 				throw ex;
 			}
 			switch (Response)

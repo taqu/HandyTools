@@ -2,12 +2,9 @@ global using Community.VisualStudio.Toolkit;
 global using Microsoft.VisualStudio.Shell;
 global using System;
 global using Task = System.Threading.Tasks.Task;
-using EnvDTE;
-using EnvDTE80;
 using HandyTools.Models;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TextManager.Interop;
-using System.IO.Packaging;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,24 +12,24 @@ using static HandyTools.Types;
 
 namespace HandyTools
 {
-	/// <summary>
-	/// This is the class that implements the package exposed by this assembly.
-	/// </summary>
-	/// <remarks>
-	/// <para>
-	/// The minimum requirement for a class to be considered a valid package for Visual Studio
-	/// is to implement the IVsPackage interface and register itself with the shell.
-	/// This package uses the helper classes defined inside the Managed Package Framework (MPF)
-	/// to do it: it derives from the Package class that provides the implementation of the
-	/// IVsPackage interface and uses the registration attributes defined in the framework to
-	/// register itself and its components with the shell. These attributes tell the pkgdef creation
-	/// utility what data to put into .pkgdef file.
-	/// </para>
-	/// <para>
-	/// To get loaded into VS, the package must be referred by &lt;Asset Type="Microsoft.VisualStudio.VsPackage" ...&gt; in .vsixmanifest file.
-	/// </para>
-	/// </remarks>
-	[PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
+    /// <summary>
+    /// This is the class that implements the package exposed by this assembly.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The minimum requirement for a class to be considered a valid package for Visual Studio
+    /// is to implement the IVsPackage interface and register itself with the shell.
+    /// This package uses the helper classes defined inside the Managed Package Framework (MPF)
+    /// to do it: it derives from the Package class that provides the implementation of the
+    /// IVsPackage interface and uses the registration attributes defined in the framework to
+    /// register itself and its components with the shell. These attributes tell the pkgdef creation
+    /// utility what data to put into .pkgdef file.
+    /// </para>
+    /// <para>
+    /// To get loaded into VS, the package must be referred by &lt;Asset Type="Microsoft.VisualStudio.VsPackage" ...&gt; in .vsixmanifest file.
+    /// </para>
+    /// </remarks>
+    [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
 	[InstalledProductRegistration(Vsix.Name, Vsix.Description, Vsix.Version)]
 	[Guid(HandyToolsPackage.PackageGuidString)]
 	[ProvideAutoLoad(UIContextGuids.SolutionExists, PackageAutoLoadFlags.BackgroundLoad)]
@@ -87,21 +84,21 @@ namespace HandyTools
 			return LoadFileSettings(DTE.Solution.FullName);
 		}
 
-		public (RefCount<ModelBase>, SettingFile) GetAIModel(TypeOllamaModel type)
+		public (RefCount<ModelBase>, SettingFile) GetAIModel(TypeModel type)
 		{
 			Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
 			SettingFile settingFile = LoadFileSettings();
             if (null != aiModel_)
             {
-				if (0<aiModel_.Count)
-				{
-					return (aiModel_, settingFile);
-				}
                 switch (aiModel_.Get().APIType)
                 {
                 case Types.TypeAIAPI.OpenAI:
                     if (settingFile.APIType == Types.TypeAIAPI.OpenAI)
                     {
+					if (aiModel_.Count <= 0)
+					{
+							(aiModel_.Get() as ModelOpenAI).Model = settingFile.GetModelName(type);
+					}
 						aiModel_.AddRef();
                         return (aiModel_, settingFile);
                     }
@@ -109,8 +106,11 @@ namespace HandyTools
                 case Types.TypeAIAPI.Ollama:
                     if (settingFile.APIType == Types.TypeAIAPI.Ollama)
                     {
+						if (aiModel_.Count <= 0)
+					{
+							(aiModel_.Get() as ModelOllama).Model = settingFile.GetModelName(type);
+					}
 						aiModel_.AddRef();
-						(aiModel_.Get() as ModelOllama).Model = settingFile.GetModelName(type);
                         return (aiModel_, settingFile);
                     }
                     break;
@@ -125,7 +125,7 @@ namespace HandyTools
 					{
 						return (null, settingFile);
 					}
-					aiModel_ = new RefCount<ModelBase>(new ModelOpenAI(settingFile));
+					aiModel_ = new RefCount<ModelBase>(new ModelOpenAI(settingFile, type));
 					break;
 				case Types.TypeAIAPI.Ollama:
 					aiModel_ = new RefCount<ModelBase>(new ModelOllama(settingFile, type));

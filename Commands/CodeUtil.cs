@@ -1,4 +1,3 @@
-using Azure;
 using EnvDTE;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.VCCodeModel;
