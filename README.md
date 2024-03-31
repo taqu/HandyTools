@@ -56,10 +56,10 @@ Just right click on the target code, and select command from Handy Tools submenu
 |        | Model Name              | Model for general tasks                                         | llama2  |
 |        | Temperature             | Temperature in generation parameters                            | 0.1     |
 |        | Translation Model Name  | Model for translation tasks                                     | llama2  |
-| Prompt | Completion              | Prompto for completion tasks                                    |         |
-|        | Documentation           | Prompto for documentation tasks                                 |         |
-|        | Explanation             | Prompto for explanation tasks                                   |         |
-|        | Translation             | Prompto for translation tasks                                   |         |
+| Prompt | Completion              | Prompt for completion tasks                                    |         |
+|        | Documentation           | Prompt for documentation tasks                                 |         |
+|        | Explanation             | Prompt for explanation tasks                                   |         |
+|        | Translation             | Prompt for translation tasks                                   |         |
 
 ### Setting File
 Try to find a setting file,

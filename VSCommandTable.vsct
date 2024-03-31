@@ -123,6 +123,15 @@
 		</CommandPlacement>
 	</CommandPlacements>
 
+	<KeyBindings>
+		<KeyBinding guid="HandyTools" id="CommandCompletion" key1="1" mod1="ALT" editor="guidVSStd97" />
+		<KeyBinding guid="HandyTools" id="CommandExplanation" key1="2" mod1="ALT" editor="guidVSStd97" />
+		<KeyBinding guid="HandyTools" id="CommandTranslation" key1="3" mod1="ALT" editor="guidVSStd97" />
+		<KeyBinding guid="HandyTools" id="CommandTranslateAndReplace" key1="4" mod1="ALT" editor="guidVSStd97" />
+		<KeyBinding guid="HandyTools" id="CommandAddDocument" key1="5" mod1="ALT" editor="guidVSStd97" />
+		<KeyBinding guid="HandyTools" id="CommandPreviewDocument" key1="6" mod1="ALT" editor="guidVSStd97" />
+	</KeyBindings>
+
 	<Symbols>
 		<GuidSymbol name="HandyTools" value="{daafe9b8-3dc3-4cb6-a2ce-3959212fdc7c}">
 			<IDSymbol name="HandyTools_MenuGroup" value="0x1000" />

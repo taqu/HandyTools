@@ -28,7 +28,6 @@ namespace HandyTools.Commands
 		{
 			using IDisposable disposable = waitDialog as IDisposable;
 			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-			waitDialog.UpdateProgress("In progress", "Handy Tools: 0/3 steps", "Handy Tools: 0/3 steps", 0, 3, true, out _);
 
 			(string definitionCode, string indent) = await CodeUtil.GetDefinitionCodeAsync();
 			if (string.IsNullOrEmpty(definitionCode))
@@ -47,14 +46,23 @@ namespace HandyTools.Commands
 				prompt = prompt.Substring(0, MaxTextLength);
 			}
 
-			waitDialog.UpdateProgress("In progress", "Handy Tools: 1/3 steps", "Handy Tools: 1/3 steps", 1, 3, true, out _);
+			bool canceled = false;
+			waitDialog.UpdateProgress("In progress", "Handy Tools: 1/3 steps", "Handy Tools: 1/3 steps", 1, 3, true, out canceled);
+			if (canceled)
+			{
+				return;
+			}
 			string response = string.Empty;
 			try
 			{
 				response = await model.Get().CompletionAsync(prompt, Temperature);
 				response = PostProcessResponse(response);
 
-				waitDialog.UpdateProgress("In progress", "Handy Tools: 2/3 steps", "Handy Tools: 2/3 steps", 2, 3, true, out _);
+				waitDialog.UpdateProgress("In progress", "Handy Tools: 2/3 steps", "Handy Tools: 2/3 steps", 2, 3, true, out canceled);
+				if (canceled)
+				{
+					return;
+				}
 			}
 			catch (Exception ex)
 			{
@@ -79,6 +87,7 @@ namespace HandyTools.Commands
 			}
 			model.Release();
 			waitDialog.UpdateProgress("In progress", "Handy Tools: 3/3 steps", "Handy Tools: 3/3 steps", 3, 3, true, out _);
+			waitDialog.EndWaitDialog();
 		}
 	}
 }

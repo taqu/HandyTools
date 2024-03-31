@@ -16,7 +16,7 @@
 	</UnifyEncoding>
 	<AI>
 		<!-- valid values: OpenAI or Ollama -->
-		<APIType>Ollama</APIType>
+		<APIType>OpenAI</APIType>
 		<ModelGeneral>llama2</ModelGeneral>
 		<ModelGeneration>llama2</ModelGeneration>
 		<ModelTranslation>llama2</ModelTranslation>

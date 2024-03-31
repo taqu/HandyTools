@@ -1,3 +1,6 @@
+- v.0.5.1
+  - Fix some bugs about async
+  - Apply short cut keybindings
 - v.0.5.0
   - Remove full-text search, because Visual Studio itself has integrated full-text search
   - Add AI commands

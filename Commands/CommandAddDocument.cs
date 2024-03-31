@@ -24,28 +24,35 @@ namespace HandyTools.Commands
 		{
 			using IDisposable disposable = waitDialog as IDisposable;
 			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-			waitDialog.UpdateProgress("In progress", "Handy Tools: 0/3 steps", "Handy Tools: 0/3 steps", 0, 3, true, out _);
 
 			(string definitionCode, string indent) = await CodeUtil.GetDefinitionCodeAsync();
 			if (string.IsNullOrEmpty(definitionCode))
 			{
 				model.Release();
 				waitDialog.EndWaitDialog();
-				await VS.MessageBox.ShowAsync("Documentation needs definition codes.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
+				await VS.MessageBox.ShowAsync("Handy Tools: Documentation needs definition codes.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
 				throw new Exception("Documentation needs definition codes.");
 			}
 			string contentTypePrefix = documentView.TextView.TextDataModel.ContentType.DisplayName;
 			string prompt = PromptTemplate.Replace("{filetype}", contentTypePrefix);
 			prompt = PromptTemplate.Replace("{content}", definitionCode);
 
-			waitDialog.UpdateProgress("In progress", "Handy Tools: 1/3 steps", "Handy Tools: 1/3 steps", 1, 3, true, out _);
+			bool canceled = false;
+			waitDialog.UpdateProgress("In progress", "Handy Tools: 1/3 steps", "Handy Tools: 1/3 steps", 1, 3, true, out canceled);
+			if (canceled)
+			{
+				return;
+			}
 			string response = string.Empty;
 			try
 			{
 				response = await model.Get().CompletionAsync(prompt, Temperature);
 				response = PostProcessResponse(response);
-
-				waitDialog.UpdateProgress("In progress", "Handy Tools: 2/3 steps", "Handy Tools: 2/3 steps", 2, 3, true, out _);
+				waitDialog.UpdateProgress("In progress", "Handy Tools: 2/3 steps", "Handy Tools: 2/3 steps", 2, 3, true, out canceled);
+				if (canceled)
+				{
+					return;
+				}
 			}
 			catch (Exception ex)
 			{
@@ -59,7 +66,7 @@ namespace HandyTools.Commands
 			{
 				model.Release();
 				waitDialog.EndWaitDialog();
-				await VS.MessageBox.ShowAsync("AI response is not appropriate.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
+				await VS.MessageBox.ShowAsync("Handy Tools: AI response is not appropriate.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
 				throw new Exception("AI response is not appropriate.");
 			}
 
@@ -76,6 +83,7 @@ namespace HandyTools.Commands
 			}
 			model.Release();
 			waitDialog.UpdateProgress("In progress", "Handy Tools: 3/3 steps", "Handy Tools: 3/3 steps", 3, 3, true, out _);
+			waitDialog.EndWaitDialog();
 		}
 	}
 }
