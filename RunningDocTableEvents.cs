@@ -209,22 +209,22 @@ namespace HandyTools
             if(Types.TypeLineFeed.CRLF == linefeed) {
                 while(!editPoint.AtEndOfDocument) {
                     editPoint.EndOfLine();
-                    string lineending = editPoint.GetText(1);
-                    if(string.IsNullOrEmpty(lineending)) {
+                    string linefeeding = editPoint.GetText(1);
+                    if(string.IsNullOrEmpty(linefeeding)) {
                         continue;
                     }
 
-                    for(int i = 0; i < lineending.Length; ++i) {
-                        switch(lineending[i]) {
+                    for(int i = 0; i < linefeeding.Length; ++i) {
+                        switch(linefeeding[i]) {
                         case '\n':
                             editPoint.ReplaceText(1, replaceLineFeed, 0);
                             ++count;
                             break;
                         case '\r':
-                            if((lineending.Length - 1) <= i) {
+                            if((linefeeding.Length - 1) <= i) {
                                 editPoint.ReplaceText(1, replaceLineFeed, 0);
                                 ++count;
-                            } else if('\n' != lineending[i + 1]) {
+                            } else if('\n' != linefeeding[i + 1]) {
                                 editPoint.ReplaceText(1, replaceLineFeed, 0);
                                 ++count;
                             } else {
@@ -241,13 +241,13 @@ namespace HandyTools
             } else {
                 while(!editPoint.AtEndOfDocument) {
                     editPoint.EndOfLine();
-                    string lineending = editPoint.GetText(1);
-                    if(string.IsNullOrEmpty(lineending)) {
+                    string linefeeding = editPoint.GetText(1);
+                    if(string.IsNullOrEmpty(linefeeding)) {
                         continue;
                     }
 
-                    for(int i = 0; i < lineending.Length; ++i) {
-                        if(lineending[i] != replaceLineFeed[0]) {
+                    for(int i = 0; i < linefeeding.Length; ++i) {
+                        if(linefeeding[i] != replaceLineFeed[0]) {
                             editPoint.ReplaceText(1, replaceLineFeed, 0);
                             ++count;
                         }

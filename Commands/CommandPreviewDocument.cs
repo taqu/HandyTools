@@ -29,7 +29,7 @@ namespace HandyTools.Commands
 			using IDisposable disposable = waitDialog as IDisposable;
 			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-			(string definitionCode, string indent) = await CodeUtil.GetDefinitionCodeAsync();
+			(string definitionCode, string indent, int _) = await CodeUtil.GetDefinitionCodeAsync(documentView, selection);
 			if (string.IsNullOrEmpty(definitionCode))
 			{
 				model.Release();

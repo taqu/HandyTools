@@ -7,7 +7,7 @@ namespace HandyTools.Commands
 {
 	[Command(PackageGuids.HandyToolsString, PackageIds.CommandAddDocument)]
 	internal sealed class CommandAddDocument : CommandAIBase<CommandAddDocument>
-    {
+	{
 		protected override void Initialize()
 		{
 			Model = Types.TypeModel.General;
@@ -25,7 +25,7 @@ namespace HandyTools.Commands
 			using IDisposable disposable = waitDialog as IDisposable;
 			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-			(string definitionCode, string indent) = await CodeUtil.GetDefinitionCodeAsync();
+			(string definitionCode, string indent, int declStartLine) = await CodeUtil.GetDefinitionCodeAsync(documentView, selection);
 			if (string.IsNullOrEmpty(definitionCode))
 			{
 				model.Release();
@@ -62,7 +62,7 @@ namespace HandyTools.Commands
 				throw ex;
 			}
 			response = CodeUtil.ExtractDoxygenComment(response, indent, LineFeed);
-			if(string.IsNullOrEmpty(response))
+			if (string.IsNullOrEmpty(response))
 			{
 				model.Release();
 				waitDialog.EndWaitDialog();
@@ -71,8 +71,21 @@ namespace HandyTools.Commands
 			}
 
 			ITextBuffer textBuffer = documentView.TextView.TextBuffer;
-			ITextSnapshotLine line = textBuffer.CurrentSnapshot.GetLineFromPosition(selection.Start.Position);
-			documentView.TextBuffer.Insert(line.Start, response + Environment.NewLine);
+			ITextSnapshotLine line = CodeUtil.GetCommentInsertionLineFromPosition(documentView, declStartLine);
+			string linefeed = string.Empty;
+			switch (LineFeed)
+			{
+				case Types.TypeLineFeed.LF:
+					linefeed = "\n";
+					break;
+				case Types.TypeLineFeed.CR:
+					linefeed = "\r";
+					break;
+				case Types.TypeLineFeed.CRLF:
+					linefeed = "\r\n";
+					break;
+			}
+			documentView.TextBuffer.Insert(line.Start, response + linefeed);
 
 			if (FormatResponse)
 			{

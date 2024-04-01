@@ -48,17 +48,20 @@ namespace HandyTools.Commands
             }
 		}
 
-		public static async Task<(string, string)> GetDefinitionCodeAsync()
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="documentView"></param>
+		/// <param name="selection"></param>
+		/// <returns></returns>
+		public static async Task<(string, string, int)> GetDefinitionCodeAsync(DocumentView documentView, SnapshotSpan selection)
 		{
 			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 			HandyToolsPackage package;
 			if (!HandyToolsPackage.Package.TryGetTarget(out package))
 			{
-				return (null, null);
+				return (null, null, 0);
 			}
-
-			DocumentView documentView = await VS.Documents.GetActiveDocumentViewAsync();
-			SnapshotSpan selection = documentView.TextView.Selection.SelectedSpans.FirstOrDefault();
 			ITextBuffer textBuffer = documentView.TextView.TextBuffer;
 			ITextSnapshotLine line;
 			if (selection.Length <= 0)
@@ -71,18 +74,18 @@ namespace HandyTools.Commands
 			line = textBuffer.CurrentSnapshot.GetLineFromPosition(selection.Start.Position);
 			if (line.Length <= 0)
 			{
-				return (null, null);
+				return (null, null, 0);
 			}
 			ProjectItem projectItem = package.DTE.ActiveDocument.ProjectItem;
 			if (null == projectItem)
 			{
-				return (null, null);
+				return (null, null, 0);
 			}
 			FileCodeModel fileCodeModel = projectItem.FileCodeModel;
 			CodeElement codeElement = FindCodeElement(fileCodeModel.CodeElements, selection);
 			if (null == codeElement)
 			{
-				return (null, null);
+				return (null, null, 0);
 			}
 			else
 			{
@@ -97,23 +100,27 @@ namespace HandyTools.Commands
 				TextDocument textDocument = document.Object("TextDocument") as EnvDTE.TextDocument;
 				if (null == textDocument)
 				{
-					return (null, null);
+					return (null, null, 0);
 				}
 				EditPoint startPoint = textDocument.CreateEditPoint(codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDefinition));
 				string textCode = startPoint.GetText(codeFunction.get_EndPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDefinition));
 				TextPoint declStartPoint = codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
+				//TextPoint declEndPoint = codeFunction.get_EndPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
 				string indent = string.Empty;
+				int lineNumber = 0;
                 if (null != declStartPoint && 0<declStartPoint.LineCharOffset)
                 {
                     EditPoint editPoint = declStartPoint.CreateEditPoint();
                     string lineString = editPoint.GetLines(declStartPoint.Line, declStartPoint.Line + 1);
 					indent = lineString.Substring(0, declStartPoint.LineCharOffset-1);
-                }
-                if (needClose)
+					lineNumber = textBuffer.CurrentSnapshot.GetLineNumberFromPosition(declStartPoint.AbsoluteCharOffset+1);
+
+				}
+				if (needClose)
 				{
 					document.Close();
 				}
-				return (textCode, indent);
+				return (textCode, indent, lineNumber);
 			}
 		}
 
@@ -249,10 +256,10 @@ namespace HandyTools.Commands
 		}
 
 		private const string UnrealMacro0 = "UFUNCTION";
-		public static ITextSnapshotLine GetCommentInsertionLineFromPosition(DocumentView documentView, SnapshotSpan selection)
+		public static ITextSnapshotLine GetCommentInsertionLineFromPosition(DocumentView documentView, int declStartLine)
 		{
 			ITextBuffer textBuffer = documentView.TextView.TextBuffer;
-			ITextSnapshotLine line = textBuffer.CurrentSnapshot.GetLineFromPosition(selection.Start.Position);
+			ITextSnapshotLine line = textBuffer.CurrentSnapshot.GetLineFromLineNumber(declStartLine);
 			if (line.LineNumber <= 0)
 			{
 				return line;

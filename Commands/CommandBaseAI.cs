@@ -87,7 +87,7 @@ namespace HandyTools.Commands
 			{
 				if (ExtractDefinition)
 				{
-					(string definitionCode, string indent) = await CodeUtil.GetDefinitionCodeAsync();
+					(string definitionCode, string indent, int declStartLine) = await CodeUtil.GetDefinitionCodeAsync(documentView, selection);
 					if (string.IsNullOrEmpty(definitionCode))
 					{
 						selection = SelectCurrentLine(documentView, selection);
@@ -128,7 +128,7 @@ namespace HandyTools.Commands
 			{
 				if (ExtractDefinition)
 				{
-					(string definitionCode, string indent) = await CodeUtil.GetDefinitionCodeAsync();
+					(string definitionCode, string indent, int declStartLine) = await CodeUtil.GetDefinitionCodeAsync(documentView, selection);
 					if (string.IsNullOrEmpty(definitionCode))
 					{
 						selection = SelectCurrentLine(documentView, selection);

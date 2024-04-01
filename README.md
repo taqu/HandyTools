@@ -24,6 +24,8 @@ Just right click on the target code, and select command from Handy Tools submenu
 |                  |                       | which the selection or one line is overlapping.                    |
 | Preview Doxygen  | Selection of one line | Preview Doxygen style document for a function on the chat view.    |
 
+![](./doc/HandyTools00.gif)
+
 *Notice: now supports only C/C++*
 
 ## Settings
