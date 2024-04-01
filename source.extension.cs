@@ -11,7 +11,7 @@ namespace HandyTools
         public const string Name = "HandyTools";
         public const string Description = @"Some tools for editing codes";
         public const string Language = "en-US";
-        public const string Version = "0.5.1";
+        public const string Version = "0.5.2";
         public const string Author = "taqu29";
         public const string Tags = "Encoding,UTF8,Line endings,CR,CRLF,LF,AI,Doxygen";
     }
