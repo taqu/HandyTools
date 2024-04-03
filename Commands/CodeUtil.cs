@@ -29,23 +29,24 @@ namespace HandyTools.Commands
 			vsCMElement.vsCMElementIncludeStmt,
 			vsCMElement.vsCMElementMacro,
 		};
-#endif
 
 		private static readonly vsCMElement[] IgnoredElements = {
 			vsCMElement.vsCMElementVCBase,
 		};
+#endif
 
 		public static Types.TypeLanguage GetLanguageFromDocument(EnvDTE.Document document)
 		{
-            ThreadHelper.ThrowIfNotOnUIThread();
-            switch (document.Language) {
-            case "C/C++":
-                return Types.TypeLanguage.C_Cpp;
-            case "CSharp":
-                return Types.TypeLanguage.CSharp;
-            default:
-                return Types.TypeLanguage.Others;
-            }
+			ThreadHelper.ThrowIfNotOnUIThread();
+			switch (document.Language)
+			{
+				case "C/C++":
+					return Types.TypeLanguage.C_Cpp;
+				case "CSharp":
+					return Types.TypeLanguage.CSharp;
+				default:
+					return Types.TypeLanguage.Others;
+			}
 		}
 
 		/// <summary>
@@ -87,41 +88,38 @@ namespace HandyTools.Commands
 			{
 				return (null, null, 0);
 			}
-			else
+			VCCodeFunction codeFunction = codeElement as VCCodeFunction;
+			bool needClose = false;
+			if (null == codeFunction.ProjectItem.Document)
 			{
-				VCCodeFunction codeFunction = codeElement as VCCodeFunction;
-				bool needClose = false;
-				if (null == codeFunction.ProjectItem.Document)
-				{
-					needClose = true;
-					codeFunction.ProjectItem.Open(EnvDTE.Constants.vsViewKindCode);
-				}
-				Document document = codeFunction.ProjectItem.Document;
-				TextDocument textDocument = document.Object("TextDocument") as EnvDTE.TextDocument;
-				if (null == textDocument)
-				{
-					return (null, null, 0);
-				}
-				EditPoint startPoint = textDocument.CreateEditPoint(codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDefinition));
-				string textCode = startPoint.GetText(codeFunction.get_EndPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDefinition));
-				TextPoint declStartPoint = codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
-				//TextPoint declEndPoint = codeFunction.get_EndPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
-				string indent = string.Empty;
-				int lineNumber = 0;
-                if (null != declStartPoint && 0<declStartPoint.LineCharOffset)
-                {
-                    EditPoint editPoint = declStartPoint.CreateEditPoint();
-                    string lineString = editPoint.GetLines(declStartPoint.Line, declStartPoint.Line + 1);
-					indent = lineString.Substring(0, declStartPoint.LineCharOffset-1);
-					lineNumber = textBuffer.CurrentSnapshot.GetLineNumberFromPosition(declStartPoint.AbsoluteCharOffset+1);
-
-				}
-				if (needClose)
-				{
-					document.Close();
-				}
-				return (textCode, indent, lineNumber);
+				needClose = true;
+				codeFunction.ProjectItem.Open(EnvDTE.Constants.vsViewKindCode);
 			}
+			Document document = codeFunction.ProjectItem.Document;
+			TextDocument textDocument = document.Object("TextDocument") as EnvDTE.TextDocument;
+			if (null == textDocument)
+			{
+				return (null, null, 0);
+			}
+			EditPoint startPoint = textDocument.CreateEditPoint(codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDefinition));
+			string textCode = startPoint.GetText(codeFunction.get_EndPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDefinition));
+			TextPoint declStartPoint = codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
+			//TextPoint declEndPoint = codeFunction.get_EndPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
+			string indent = string.Empty;
+			int lineNumber = 0;
+			if (null != declStartPoint && 0 < declStartPoint.LineCharOffset)
+			{
+				EditPoint editPoint = declStartPoint.CreateEditPoint();
+				string lineString = editPoint.GetLines(declStartPoint.Line, declStartPoint.Line + 1);
+				indent = lineString.Substring(0, declStartPoint.LineCharOffset - 1);
+				lineNumber = textBuffer.CurrentSnapshot.GetLineNumberFromPosition(declStartPoint.AbsoluteCharOffset + 1);
+
+			}
+			if (needClose)
+			{
+				document.Close();
+			}
+			return (textCode, indent, lineNumber);
 		}
 
 		public static CodeElement FindCodeElement(CodeElements elements, SnapshotSpan selection)
@@ -132,10 +130,6 @@ namespace HandyTools.Commands
 			int selectionEnd = selection.End.Position + 1;
 			foreach (CodeElement codeElement in elements)
 			{
-				if (0 <= Array.IndexOf(IgnoredElements, codeElement.Kind))
-				{
-					continue;
-				}
 				if (codeElement.Kind != vsCMElement.vsCMElementFunction || !(codeElement is VCCodeFunction))
 				{
 					CodeElement recurse = FindCodeElementRecursive(codeElement.Children, selectionStart, selectionEnd);
@@ -148,6 +142,7 @@ namespace HandyTools.Commands
 				VCCodeFunction codeFunction = codeElement as VCCodeFunction;
 				TextPoint startPoint = codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
 				TextPoint endPoint = codeFunction.get_EndPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
+				Log.Output(codeFunction.DeclarationText);
 				if (endPoint.AbsoluteCharOffset < selectionStart)
 				{
 					continue;
@@ -170,10 +165,6 @@ namespace HandyTools.Commands
 			}
 			foreach (CodeElement codeElement in elements)
 			{
-				if (0 <= Array.IndexOf(IgnoredElements, codeElement.Kind))
-				{
-					continue;
-				}
 				if (codeElement.Kind != vsCMElement.vsCMElementFunction || !(codeElement is VCCodeFunction))
 				{
 					CodeElement recurse = FindCodeElementRecursive(codeElement.Children, selectionStart, selectionEnd);
@@ -186,6 +177,7 @@ namespace HandyTools.Commands
 				VCCodeFunction codeFunction = codeElement as VCCodeFunction;
 				TextPoint startPoint = codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
 				TextPoint endPoint = codeFunction.get_EndPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
+				Log.Output(codeFunction.DeclarationText);
 				if (endPoint.AbsoluteCharOffset < selectionStart)
 				{
 					continue;
@@ -202,32 +194,33 @@ namespace HandyTools.Commands
 		public static string AddIndent(string text, string indent, Types.TypeLineFeed typeLineFeed)
 		{
 			StringBuilder stringBuilder = new StringBuilder();
-			using(TextReader reader = new StringReader(text))
+			using (TextReader reader = new StringReader(text))
 			{
 				int count = 0;
-				while (true) {
-				string line = reader.ReadLine();
-					if(null == line)
+				while (true)
+				{
+					string line = reader.ReadLine();
+					if (null == line)
 					{
 						break;
 					}
 					if (0 < count)
 					{
-                        switch (typeLineFeed)
-                        {
-                        case Types.TypeLineFeed.LF:
-                            stringBuilder.Append('\n');
-                            break;
-                        case Types.TypeLineFeed.CR:
-                            stringBuilder.Append('\r');
-                            break;
-                        case Types.TypeLineFeed.CRLF:
-                            stringBuilder.Append("\r\n");
-                            break;
-                        }
-                    }
+						switch (typeLineFeed)
+						{
+							case Types.TypeLineFeed.LF:
+								stringBuilder.Append('\n');
+								break;
+							case Types.TypeLineFeed.CR:
+								stringBuilder.Append('\r');
+								break;
+							case Types.TypeLineFeed.CRLF:
+								stringBuilder.Append("\r\n");
+								break;
+						}
+					}
 					++count;
-                    line = line.TrimStart();
+					line = line.TrimStart();
 					stringBuilder.Append(indent);
 					stringBuilder.Append(line);
 				}
@@ -252,7 +245,7 @@ namespace HandyTools.Commands
 			{
 				return string.Empty;
 			}
-			return AddIndent(response.Substring(start, end-start+"*/".Length), indent, typeLineFeed);
+			return AddIndent(response.Substring(start, end - start + "*/".Length), indent, typeLineFeed);
 		}
 
 		private const string UnrealMacro0 = "UFUNCTION";

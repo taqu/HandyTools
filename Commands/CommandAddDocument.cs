@@ -41,6 +41,7 @@ namespace HandyTools.Commands
 			waitDialog.UpdateProgress("In progress", "Handy Tools: 1/3 steps", "Handy Tools: 1/3 steps", 1, 3, true, out canceled);
 			if (canceled)
 			{
+				waitDialog.EndWaitDialog();
 				return;
 			}
 			string response = string.Empty;
@@ -51,6 +52,7 @@ namespace HandyTools.Commands
 				waitDialog.UpdateProgress("In progress", "Handy Tools: 2/3 steps", "Handy Tools: 2/3 steps", 2, 3, true, out canceled);
 				if (canceled)
 				{
+					waitDialog.EndWaitDialog();
 					return;
 				}
 			}

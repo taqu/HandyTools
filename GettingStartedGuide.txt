@@ -13,7 +13,7 @@ Some tools for code editing.
 
 ## AI Features
 Just right click on the target code, and select command from Handy Tools submenu.
-![](./doc/AIMenu.jpg)
+![AIMenu.jpg](AIMenu.jpg)
 
 | Command          | Place                 | Description                                                        |
 | :------          | :----                 | :----------                                                        |
@@ -24,12 +24,14 @@ Just right click on the target code, and select command from Handy Tools submenu
 |                  |                       | which the selection or one line is overlapping.                    |
 | Preview Doxygen  | Selection of one line | Preview Doxygen style document for a function on the chat view.    |
 
+![HandyTools00.gif](HandyTools00.gif)
+
 *Notice: now supports only C/C++*
 
 ## Settings
 
 ### General
-![](./doc/Settings.jpg)
+![Settings__1.jpg](Settings__1.jpg)
 
 | Category        | Item               | Description                     | Default |
 | :-------        | :---               | :----------                     | :------ |
@@ -43,7 +45,7 @@ Just right click on the target code, and select command from Handy Tools submenu
 |                 | Others             | Line feed for other text format | LF      |
 
 ### AI
-![](./doc/SettingsAI.jpg)
+![SettingsAI.jpg](SettingsAI.jpg)
 
 | AI     | Item                    | Description                                                     | Default |
 | :---   | :---                    | :----------                                                     | :------ |
@@ -90,7 +92,7 @@ An example general setting file "_handytools.xml" is below,
 </HandyTools>
 ```
 
-#### General Settings
+#### AI Settings
 An example settings for [Ollama](https://ollama.com/) endpoint,
 
 ```xml
@@ -128,8 +130,23 @@ An example settings for [Ollama](https://ollama.com/) endpoint,
 	</AI>
 </HandyTools>
 ```
-# ToDo
 
-# License
-This software is distributed under two licenses 'The MIT License' or 'Public Domain', choose whichever you like.
+# Release
+
+- v.0.5.2
+  - Add template and Unreal's FUNCTION macro
+- v.0.5.1
+  - Fix some bugs about async
+  - Apply short cut keybindings
+- v.0.5.0
+  - Remove full-text search, because Visual Studio itself has integrated full-text search
+  - Add AI commands
+- v.0.4.0
+  - Add a search window menu
+- v.0.3.0
+  - Fix failures on loading settings
+- v.0.2.0
+  - Add full-text search
+- v.0.1.0
+  - Initial release
 
