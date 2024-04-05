@@ -1,10 +1,13 @@
 using EnvDTE;
 using Microsoft.VisualStudio.Text;
+using Microsoft.VisualStudio.TextManager.Interop;
 using Microsoft.VisualStudio.VCCodeModel;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Documents;
 
 namespace HandyTools.Commands
 {
@@ -111,9 +114,17 @@ namespace HandyTools.Commands
 			{
 				EditPoint editPoint = declStartPoint.CreateEditPoint();
 				string lineString = editPoint.GetLines(declStartPoint.Line, declStartPoint.Line + 1);
-				indent = lineString.Substring(0, declStartPoint.LineCharOffset - 1);
 				lineNumber = textBuffer.CurrentSnapshot.GetLineNumberFromPosition(declStartPoint.AbsoluteCharOffset + 1);
-
+				StringBuilder stringBuilder = new StringBuilder(lineString.Length);
+				foreach(char c in lineString)
+				{
+					if (!char.IsWhiteSpace(c))
+					{
+						break;
+					}
+					stringBuilder.Append(c);
+				}
+				indent = stringBuilder.ToString();
 			}
 			if (needClose)
 			{
@@ -142,7 +153,7 @@ namespace HandyTools.Commands
 				VCCodeFunction codeFunction = codeElement as VCCodeFunction;
 				TextPoint startPoint = codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
 				TextPoint endPoint = codeFunction.get_EndPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
-				Log.Output(codeFunction.DeclarationText);
+				Log.Output(string.Format("{0}\n", codeFunction.DeclarationText));
 				if (endPoint.AbsoluteCharOffset < selectionStart)
 				{
 					continue;
@@ -177,7 +188,7 @@ namespace HandyTools.Commands
 				VCCodeFunction codeFunction = codeElement as VCCodeFunction;
 				TextPoint startPoint = codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
 				TextPoint endPoint = codeFunction.get_EndPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
-				Log.Output(codeFunction.DeclarationText);
+				Log.Output(string.Format("{0}\n", codeFunction.DeclarationText));
 				if (endPoint.AbsoluteCharOffset < selectionStart)
 				{
 					continue;
@@ -248,7 +259,18 @@ namespace HandyTools.Commands
 			return AddIndent(response.Substring(start, end - start + "*/".Length), indent, typeLineFeed);
 		}
 
-		private const string UnrealMacro0 = "UFUNCTION";
+		private static bool IsEmptyLine(string line)
+		{
+			foreach(char c in line)
+			{
+                if (!char.IsWhiteSpace(c))
+                {
+					return false; 
+                }
+            }
+			return true;
+		}
+
 		public static ITextSnapshotLine GetCommentInsertionLineFromPosition(DocumentView documentView, int declStartLine)
 		{
 			ITextBuffer textBuffer = documentView.TextView.TextBuffer;
@@ -257,10 +279,17 @@ namespace HandyTools.Commands
 			{
 				return line;
 			}
-			ITextSnapshotLine upperLine = textBuffer.CurrentSnapshot.GetLineFromLineNumber(line.LineNumber - 1);
-			if (upperLine.GetText().Contains(UnrealMacro0))
+
+			int lineNumber = line.LineNumber - 1;
+			for (int i = 0; i < 10 && 0< lineNumber; ++i, --lineNumber)
 			{
-				return upperLine;
+				ITextSnapshotLine upperLine = textBuffer.CurrentSnapshot.GetLineFromLineNumber(lineNumber);
+				string lineText = upperLine.GetText();
+				if (IsEmptyLine(lineText))
+				{
+					return textBuffer.CurrentSnapshot.GetLineFromLineNumber(lineNumber+1);
+				}
+				line = upperLine;
 			}
 			return line;
 		}

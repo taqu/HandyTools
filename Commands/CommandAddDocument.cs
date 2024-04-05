@@ -48,6 +48,7 @@ namespace HandyTools.Commands
 			try
 			{
 				response = await model.Get().CompletionAsync(prompt, Temperature);
+				Log.Output(response);
 				response = PostProcessResponse(response);
 				waitDialog.UpdateProgress("In progress", "Handy Tools: 2/3 steps", "Handy Tools: 2/3 steps", 2, 3, true, out canceled);
 				if (canceled)
