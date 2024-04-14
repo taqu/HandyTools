@@ -67,15 +67,7 @@ namespace HandyTools.Commands
 				return (null, null, 0);
 			}
 			ITextBuffer textBuffer = documentView.TextView.TextBuffer;
-			ITextSnapshotLine line;
-			if (selection.Length <= 0)
-			{
-				line = textBuffer.CurrentSnapshot.GetLineFromPosition(selection.Start.Position);
-				SnapshotSpan snapshotSpan = new SnapshotSpan(line.Start, line.End);
-				documentView.TextView.Selection.Select(snapshotSpan, false);
-				selection = documentView.TextView.Selection.SelectedSpans.FirstOrDefault();
-			}
-			line = textBuffer.CurrentSnapshot.GetLineFromPosition(selection.Start.Position);
+			ITextSnapshotLine line = textBuffer.CurrentSnapshot.GetLineFromPosition(selection.Start.Position);
 			if (line.Length <= 0)
 			{
 				return (null, null, 0);
@@ -85,8 +77,11 @@ namespace HandyTools.Commands
 			{
 				return (null, null, 0);
 			}
+			await Log.OutputAsync(string.Format("Cursor Position: {0}\n", selection.Start.Position));
 			FileCodeModel fileCodeModel = projectItem.FileCodeModel;
-			CodeElement codeElement = FindCodeElement(fileCodeModel.CodeElements, selection);
+			(CodeElement, bool) result = FindCodeElement(fileCodeModel.CodeElements, selection);
+			CodeElement codeElement = result.Item1;
+			bool declaration = result.Item2;
 			if (null == codeElement)
 			{
 				return (null, null, 0);
@@ -106,15 +101,15 @@ namespace HandyTools.Commands
 			}
 			EditPoint startPoint = textDocument.CreateEditPoint(codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDefinition));
 			string textCode = startPoint.GetText(codeFunction.get_EndPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDefinition));
-			TextPoint declStartPoint = codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
-			//TextPoint declEndPoint = codeFunction.get_EndPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
+			TextPoint declStartPoint = declaration
+				? codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration)
+				: codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDefinition);
 			string indent = string.Empty;
 			int lineNumber = 0;
 			if (null != declStartPoint && 0 < declStartPoint.LineCharOffset)
 			{
-				EditPoint editPoint = declStartPoint.CreateEditPoint();
-				string lineString = editPoint.GetLines(declStartPoint.Line, declStartPoint.Line + 1);
-				lineNumber = textBuffer.CurrentSnapshot.GetLineNumberFromPosition(declStartPoint.AbsoluteCharOffset + 1);
+				string lineString = textBuffer.CurrentSnapshot.GetLineFromPosition(declStartPoint.AbsoluteCharOffset).GetText();
+				lineNumber = textBuffer.CurrentSnapshot.GetLineNumberFromPosition(declStartPoint.AbsoluteCharOffset);
 				StringBuilder stringBuilder = new StringBuilder(lineString.Length);
 				foreach(char c in lineString)
 				{
@@ -133,7 +128,7 @@ namespace HandyTools.Commands
 			return (textCode, indent, lineNumber);
 		}
 
-		public static CodeElement FindCodeElement(CodeElements elements, SnapshotSpan selection)
+		public static (CodeElement, bool) FindCodeElement(CodeElements elements, SnapshotSpan selection)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			//EnvDTE.TextPoint has one base offset, so offset selection points.
@@ -143,8 +138,8 @@ namespace HandyTools.Commands
 			{
 				if (codeElement.Kind != vsCMElement.vsCMElementFunction || !(codeElement is VCCodeFunction))
 				{
-					CodeElement recurse = FindCodeElementRecursive(codeElement.Children, selectionStart, selectionEnd);
-					if (null != recurse)
+					(CodeElement, bool) recurse = FindCodeElementRecursive(codeElement.Children, selectionStart, selectionEnd);
+					if (null != recurse.Item1)
 					{
 						return recurse;
 					}
@@ -153,33 +148,30 @@ namespace HandyTools.Commands
 				VCCodeFunction codeFunction = codeElement as VCCodeFunction;
 				TextPoint startPoint = codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
 				TextPoint endPoint = codeFunction.get_EndPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
-				Log.Output(string.Format("{0}\n", codeFunction.DeclarationText));
-				if (endPoint.AbsoluteCharOffset < selectionStart)
+				Log.Output(string.Format("{0} ({1} - {2})\n", codeElement.Name, startPoint.AbsoluteCharOffset, endPoint.AbsoluteCharOffset));
+				bool declaration = true;
+				if (startPoint.AbsoluteCharOffset <= selectionStart && selectionStart <= endPoint.AbsoluteCharOffset)
 				{
-					continue;
+					Log.Output(string.Format("{0}\n", codeFunction.DeclarationText));
+					return (codeElement, declaration);
 				}
-				if (selectionEnd < startPoint.AbsoluteCharOffset)
-				{
-					continue;
-				}
-				return codeElement;
 			}
-			return null;
+			return (null, false);
 		}
 
-		public static CodeElement FindCodeElementRecursive(CodeElements elements, int selectionStart, int selectionEnd)
+		public static (CodeElement, bool) FindCodeElementRecursive(CodeElements elements, int selectionStart, int selectionEnd)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			if (null == elements)
 			{
-				return null;
+				return (null, false);
 			}
 			foreach (CodeElement codeElement in elements)
 			{
 				if (codeElement.Kind != vsCMElement.vsCMElementFunction || !(codeElement is VCCodeFunction))
 				{
-					CodeElement recurse = FindCodeElementRecursive(codeElement.Children, selectionStart, selectionEnd);
-					if (null != recurse)
+					(CodeElement, bool) recurse = FindCodeElementRecursive(codeElement.Children, selectionStart, selectionEnd);
+					if (null != recurse.Item1)
 					{
 						return recurse;
 					}
@@ -188,18 +180,15 @@ namespace HandyTools.Commands
 				VCCodeFunction codeFunction = codeElement as VCCodeFunction;
 				TextPoint startPoint = codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
 				TextPoint endPoint = codeFunction.get_EndPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
-				Log.Output(string.Format("{0}\n", codeFunction.DeclarationText));
-				if (endPoint.AbsoluteCharOffset < selectionStart)
+				Log.Output(string.Format("{0} ({1} - {2})\n", codeElement.Name, startPoint.AbsoluteCharOffset, endPoint.AbsoluteCharOffset));
+				bool declaration = true;
+				if (startPoint.AbsoluteCharOffset <= selectionStart && selectionStart <= endPoint.AbsoluteCharOffset)
 				{
-					continue;
+					Log.Output(string.Format("{0}\n", codeFunction.DeclarationText));
+					return (codeElement, declaration);
 				}
-				if (selectionEnd < startPoint.AbsoluteCharOffset)
-				{
-					continue;
-				}
-				return codeElement;
 			}
-			return null;
+			return (null, false);
 		}
 
 		public static string AddIndent(string text, string indent, Types.TypeLineFeed typeLineFeed)
@@ -279,19 +268,7 @@ namespace HandyTools.Commands
 			{
 				return line;
 			}
-
-			int lineNumber = line.LineNumber - 1;
-			for (int i = 0; i < 10 && 0< lineNumber; ++i, --lineNumber)
-			{
-				ITextSnapshotLine upperLine = textBuffer.CurrentSnapshot.GetLineFromLineNumber(lineNumber);
-				string lineText = upperLine.GetText();
-				if (IsEmptyLine(lineText))
-				{
-					return textBuffer.CurrentSnapshot.GetLineFromLineNumber(lineNumber+1);
-				}
-				line = upperLine;
-			}
-			return line;
+			return textBuffer.CurrentSnapshot.GetLineFromLineNumber(line.LineNumber);
 		}
 	}
 }

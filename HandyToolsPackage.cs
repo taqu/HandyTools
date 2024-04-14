@@ -74,20 +74,10 @@ namespace HandyTools
 			return fileSettings_;
 		}
 
-		public SettingFile LoadFileSettings()
+		public (RefCount<ModelBase>, SettingFile) GetAIModel(TypeModel type, string documentPath)
 		{
 			Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-			if (null == DTE || null == DTE.Solution)
-			{
-				return LoadFileSettings(string.Empty);
-			}
-			return LoadFileSettings(DTE.Solution.FullName);
-		}
-
-		public (RefCount<ModelBase>, SettingFile) GetAIModel(TypeModel type)
-		{
-			Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-			SettingFile settingFile = LoadFileSettings();
+			SettingFile settingFile = LoadFileSettings(documentPath);
             if (null != aiModel_)
             {
                 switch (aiModel_.Get().APIType)

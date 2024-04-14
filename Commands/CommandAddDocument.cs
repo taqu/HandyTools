@@ -48,7 +48,7 @@ namespace HandyTools.Commands
 			try
 			{
 				response = await model.Get().CompletionAsync(prompt, Temperature);
-				Log.Output(response);
+				await Log.OutputAsync(response);
 				response = PostProcessResponse(response);
 				waitDialog.UpdateProgress("In progress", "Handy Tools: 2/3 steps", "Handy Tools: 2/3 steps", 2, 3, true, out canceled);
 				if (canceled)
@@ -74,7 +74,11 @@ namespace HandyTools.Commands
 			}
 
 			ITextBuffer textBuffer = documentView.TextView.TextBuffer;
-			ITextSnapshotLine line = CodeUtil.GetCommentInsertionLineFromPosition(documentView, declStartLine);
+			ITextSnapshotLine declLine = textBuffer.CurrentSnapshot.GetLineFromLineNumber(declStartLine);
+			string declLineText = declLine.GetText();
+			ITextSnapshotLine line = textBuffer.CurrentSnapshot.GetLineFromLineNumber(declStartLine);
+			await Log.OutputAsync(line.GetText());
+			string lineText = line.GetText();
 			string linefeed = string.Empty;
 			switch (LineFeed)
 			{

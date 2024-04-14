@@ -23,5 +23,14 @@ namespace HandyTools.ToolWindows
 				OutputTextBox.Text = value;
 			}
         }
-	}
+
+		private void OnClickButtonSend(object sender, RoutedEventArgs e)
+		{
+            string text = InputTextBox.Text.Trim();
+            if(string.IsNullOrEmpty(text))
+            {
+                return;
+            }
+        }
+    }
 }

@@ -42,7 +42,8 @@ namespace HandyTools.Commands
 				return;
 			}
 			Initialize();
-			(RefCount<ModelBase> model, SettingFile settingFile) = package.GetAIModel(Model);
+			DocumentView documentView = await VS.Documents.GetActiveDocumentViewAsync();
+			(RefCount<ModelBase> model, SettingFile settingFile) = package.GetAIModel(Model, documentView.FilePath);
 			if (null == model)
 			{
 				await VS.MessageBox.ShowAsync("Failed to load AI model. Please check settings.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
@@ -58,7 +59,6 @@ namespace HandyTools.Commands
 			LineFeed = settingFile.Get(CodeUtil.GetLanguageFromDocument(package.DTE.ActiveDocument));
 			Temperature = settingFile.Temperature;
 			BeforeRun(settingFile);
-			DocumentView documentView = await VS.Documents.GetActiveDocumentViewAsync();
 			SnapshotSpan selection = documentView.TextView.Selection.SelectedSpans.FirstOrDefault();
 
 			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -68,7 +68,7 @@ namespace HandyTools.Commands
 			threadedWaitDialog.StartWaitDialogWithCallback(
 				"Handy Tools AI",
 				"Chat Agent is working on it ...",
-				"Chat Agent is working on it ...",
+				"",
 				null,
 				"Handy Tools AI working ...",
 				true,
@@ -77,7 +77,7 @@ namespace HandyTools.Commands
 				0,
 				cancelCallback);
 
-			Task task = RunTaskAsync(threadedWaitDialog, model, documentView, selection);
+			await RunTaskAsync(threadedWaitDialog, model, documentView, selection);
 		}
 
 		protected async System.Threading.Tasks.Task<(SnapshotSpan selection, string text)> GetCurrentSelectionAsync(DocumentView documentView, SnapshotSpan selection)

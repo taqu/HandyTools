@@ -1,3 +1,7 @@
+- v.0.5.3
+  - Remove supports of Unreal
+- v.0.5.2
+  - Add template and Unreal's FUNCTION macro
 - v.0.5.1
   - Fix some bugs about async
   - Apply short cut keybindings

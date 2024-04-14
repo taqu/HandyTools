@@ -10,9 +10,21 @@
              d:DesignHeight="300" d:DesignWidth="300"
              Name="MyToolWindow">
     <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="1*"/>
+        </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
-            <RowDefinition Height="260*"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="60"/>
         </Grid.RowDefinitions>
-        <TextBox Name="OutputTextBox" IsReadOnly="True" />
+        <TextBox Name="OutputTextBox" Grid.Column="0" Grid.Row="0" IsReadOnly="True" />
+        <Grid Grid.Column="0" Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="60"/>
+            </Grid.ColumnDefinitions>
+            <TextBox Name="InputTextBox" Grid.Column="0" Grid.Row="0" IsReadOnly="False"/>
+            <Button Name="ButtonSend" Grid.Column="1" Grid.Row="0" Click="OnClickButtonSend">Send</Button>
+        </Grid>
     </Grid>
 </UserControl>
