@@ -1,3 +1,4 @@
+using Community.VisualStudio.Toolkit;
 using EnvDTE;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.TextManager.Interop;
@@ -52,6 +53,22 @@ namespace HandyTools.Commands
 			}
 		}
 
+		public static int GetCharOffsetWithLF(ITextSnapshot textSnapshot, SnapshotSpan selection)
+		{
+			int targetLine = selection.Start.GetContainingLineNumber();
+			int charOffset = 0;
+			foreach (ITextSnapshotLine line in textSnapshot.Lines)
+			{
+				if(line.LineNumber == targetLine)
+				{
+					charOffset += selection.Start - selection.Start.GetContainingLine().Start;
+					break;
+				}
+				charOffset += line.Length + 1;
+			}
+			return charOffset;
+		}
+
 		/// <summary>
 		/// 
 		/// </summary>
@@ -67,7 +84,8 @@ namespace HandyTools.Commands
 				return (null, null, 0);
 			}
 			ITextBuffer textBuffer = documentView.TextView.TextBuffer;
-			ITextSnapshotLine line = textBuffer.CurrentSnapshot.GetLineFromPosition(selection.Start.Position);
+			ITextSnapshot textSnapshot = textBuffer.CurrentSnapshot;
+			ITextSnapshotLine line = textSnapshot.GetLineFromPosition(selection.Start.Position);
 			if (line.Length <= 0)
 			{
 				return (null, null, 0);
@@ -77,9 +95,9 @@ namespace HandyTools.Commands
 			{
 				return (null, null, 0);
 			}
-			await Log.OutputAsync(string.Format("Cursor Position: {0}\n", selection.Start.Position));
 			FileCodeModel fileCodeModel = projectItem.FileCodeModel;
-			(CodeElement, bool) result = FindCodeElement(fileCodeModel.CodeElements, selection);
+			int selectionStart = GetCharOffsetWithLF(textSnapshot, selection);
+			(CodeElement, bool) result = FindCodeElement(fileCodeModel.CodeElements, selectionStart);
 			CodeElement codeElement = result.Item1;
 			bool declaration = result.Item2;
 			if (null == codeElement)
@@ -104,12 +122,13 @@ namespace HandyTools.Commands
 			TextPoint declStartPoint = declaration
 				? codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration)
 				: codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDefinition);
+			await Log.OutputAsync(textCode + "\n");
 			string indent = string.Empty;
 			int lineNumber = 0;
 			if (null != declStartPoint && 0 < declStartPoint.LineCharOffset)
 			{
-				string lineString = textBuffer.CurrentSnapshot.GetLineFromPosition(declStartPoint.AbsoluteCharOffset).GetText();
-				lineNumber = textBuffer.CurrentSnapshot.GetLineNumberFromPosition(declStartPoint.AbsoluteCharOffset);
+				lineNumber = Math.Max(declStartPoint.Line - 1, 0);
+				string lineString = textBuffer.CurrentSnapshot.GetLineFromPosition(selection.Start.Position).GetText();
 				StringBuilder stringBuilder = new StringBuilder(lineString.Length);
 				foreach(char c in lineString)
 				{
@@ -128,17 +147,16 @@ namespace HandyTools.Commands
 			return (textCode, indent, lineNumber);
 		}
 
-		public static (CodeElement, bool) FindCodeElement(CodeElements elements, SnapshotSpan selection)
+		public static (CodeElement, bool) FindCodeElement(CodeElements elements, int selectionStart)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			//EnvDTE.TextPoint has one base offset, so offset selection points.
-			int selectionStart = selection.Start.Position + 1;
-			int selectionEnd = selection.End.Position + 1;
+			selectionStart = selectionStart + 1;
 			foreach (CodeElement codeElement in elements)
 			{
 				if (codeElement.Kind != vsCMElement.vsCMElementFunction || !(codeElement is VCCodeFunction))
 				{
-					(CodeElement, bool) recurse = FindCodeElementRecursive(codeElement.Children, selectionStart, selectionEnd);
+					(CodeElement, bool) recurse = FindCodeElementRecursive(codeElement.Children, selectionStart);
 					if (null != recurse.Item1)
 					{
 						return recurse;
@@ -148,7 +166,7 @@ namespace HandyTools.Commands
 				VCCodeFunction codeFunction = codeElement as VCCodeFunction;
 				TextPoint startPoint = codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
 				TextPoint endPoint = codeFunction.get_EndPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
-				Log.Output(string.Format("{0} ({1} - {2})\n", codeElement.Name, startPoint.AbsoluteCharOffset, endPoint.AbsoluteCharOffset));
+				//Log.Output(string.Format("{0} {1} - {2}\n", codeFunction.Name, startPoint.AbsoluteCharOffset, endPoint.AbsoluteCharOffset));
 				bool declaration = true;
 				if (startPoint.AbsoluteCharOffset <= selectionStart && selectionStart <= endPoint.AbsoluteCharOffset)
 				{
@@ -159,7 +177,7 @@ namespace HandyTools.Commands
 			return (null, false);
 		}
 
-		public static (CodeElement, bool) FindCodeElementRecursive(CodeElements elements, int selectionStart, int selectionEnd)
+		public static (CodeElement, bool) FindCodeElementRecursive(CodeElements elements, int selectionStart)
 		{
 			ThreadHelper.ThrowIfNotOnUIThread();
 			if (null == elements)
@@ -170,7 +188,7 @@ namespace HandyTools.Commands
 			{
 				if (codeElement.Kind != vsCMElement.vsCMElementFunction || !(codeElement is VCCodeFunction))
 				{
-					(CodeElement, bool) recurse = FindCodeElementRecursive(codeElement.Children, selectionStart, selectionEnd);
+					(CodeElement, bool) recurse = FindCodeElementRecursive(codeElement.Children, selectionStart);
 					if (null != recurse.Item1)
 					{
 						return recurse;
@@ -180,7 +198,7 @@ namespace HandyTools.Commands
 				VCCodeFunction codeFunction = codeElement as VCCodeFunction;
 				TextPoint startPoint = codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
 				TextPoint endPoint = codeFunction.get_EndPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
-				Log.Output(string.Format("{0} ({1} - {2})\n", codeElement.Name, startPoint.AbsoluteCharOffset, endPoint.AbsoluteCharOffset));
+				//Log.Output(string.Format("{0} {1} - {2}\n", codeFunction.Name, startPoint.AbsoluteCharOffset, endPoint.AbsoluteCharOffset));
 				bool declaration = true;
 				if (startPoint.AbsoluteCharOffset <= selectionStart && selectionStart <= endPoint.AbsoluteCharOffset)
 				{
