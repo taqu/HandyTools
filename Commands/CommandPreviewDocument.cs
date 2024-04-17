@@ -2,10 +2,7 @@ using EnvDTE;
 using HandyTools.Models;
 using HandyTools.ToolWindows;
 using Microsoft.VisualStudio.Shell.Interop;
-using Microsoft.VisualStudio.TaskStatusCenter;
 using Microsoft.VisualStudio.Text;
-using System.Linq;
-using static HandyTools.Types;
 
 namespace HandyTools.Commands
 {
@@ -73,19 +70,19 @@ namespace HandyTools.Commands
 				await VS.MessageBox.ShowAsync(ex.Message, buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
 				throw ex;
 			}
-			response = CodeUtil.ExtractDoxygenComment(response, indent, LineFeed);
-			if (string.IsNullOrEmpty(response))
-			{
-				model.Release();
-				waitDialog.EndWaitDialog();
-				await VS.MessageBox.ShowAsync("AI response is not appropriate.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
-				throw new Exception("AI response is not appropriate.");
-			}
+			string doxygenComment = CodeUtil.ExtractDoxygenComment(response, indent, LineFeed);
+			//if (string.IsNullOrEmpty(doxygenComment))
+			//{
+			//	model.Release();
+			//	waitDialog.EndWaitDialog();
+			//	await VS.MessageBox.ShowAsync("AI response is not appropriate.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
+			//	throw new Exception("AI response is not appropriate.");
+			//}
 			ToolWindowPane windowPane = await ToolWindowChat.ShowAsync();
 			ToolWindowChatControl windowControl = windowPane.Content as ToolWindowChatControl;
 			if (null != windowControl)
 			{
-				windowControl.Output = response;
+				windowControl.Output = string.IsNullOrEmpty(doxygenComment)? response : doxygenComment;
 			}
 			model.Release();
 			waitDialog.UpdateProgress("In progress", "Handy Tools: 3/3 steps", "Handy Tools: 3/3 steps", 3, 3, true, out _);

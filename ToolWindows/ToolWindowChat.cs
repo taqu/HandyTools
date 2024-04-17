@@ -1,7 +1,5 @@
 using Community.VisualStudio.Toolkit;
 using Microsoft.VisualStudio.Imaging;
-using Microsoft.VisualStudio.Shell;
-using System;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Threading;

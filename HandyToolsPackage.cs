@@ -70,8 +70,7 @@ namespace HandyTools
 		public SettingFile LoadFileSettings(string documentPath)
 		{
 			Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-			fileSettings_.Load(package_, documentPath);
-			return fileSettings_;
+			return SettingFile.Load(package_, documentPath);
 		}
 
 		public (RefCount<ModelBase>, SettingFile) GetAIModel(TypeModel type, string documentPath)
@@ -142,7 +141,6 @@ namespace HandyTools
 		private RunningDocTableEvents runningDocTableEvents_;
 		private EnvDTE.SolutionEvents solutionEvents_;
 		private EnvDTE.ProjectItemsEvents projectItemsEvents_;
-		private SettingFile fileSettings_ = new SettingFile();
 		private RefCount<ModelBase> aiModel_;
 
 		/// <summary>
