@@ -58,7 +58,7 @@
     <Compile Include="Commands\CommandTranslateAndReplace.cs" />
     <Compile Include="Commands\CommandTranslation.cs" />
     <Compile Include="Completion\AICompletionCommandHandler.cs" />
-    <Compile Include="Completion\AICompletionHandlerProvider.cs" />
+    <Compile Include="Completion\AICompletionHandlerProvider .cs" />
     <Compile Include="Completion\AICompletionSource.cs" />
     <Compile Include="Completion\AICompletionSourceProvider.cs" />
     <Compile Include="Models\RefCount.cs" />

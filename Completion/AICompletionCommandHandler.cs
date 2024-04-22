@@ -1,15 +1,12 @@
 using Microsoft.VisualStudio;
-using Microsoft.VisualStudio.Language.Intellisense;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
-using static Microsoft.VisualStudio.Shell.ThreadedWaitDialogHelper;
-using System.Runtime.InteropServices;
-using Microsoft.VisualStudio.Text;
+using MSXML;
 
 namespace HandyTools.Completion
 {
-	internal class AICompletionCommandHandler : IOleCommandTarget
+	internal class AICompletionCommandHandler : IOleCommandTarget, IVsExpansionClient
 	{
 		internal AICompletionCommandHandler(IVsTextView textViewAdapter, ITextView textView, AICompletionHandlerProvider provider)
 		{
@@ -33,102 +30,56 @@ namespace HandyTools.Completion
 			{
 				return nextCommandHandler_.Exec(ref pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut);
 			}
-			//make a copy of this so we can look at it after forwarding some commands
-			uint commandID = nCmdID;
-			char typedChar = char.MinValue;
-			//make sure the input is a char before getting it
-			if (pguidCmdGroup == VSConstants.VSStd2K && nCmdID == (uint)VSConstants.VSStd2KCmdID.TYPECHAR)
-			{
-				typedChar = (char)(ushort)Marshal.GetObjectForNativeVariant(pvaIn);
-			}
-
-			//check for a commit character
-			if (nCmdID == (uint)VSConstants.VSStd2KCmdID.RETURN
-				|| nCmdID == (uint)VSConstants.VSStd2KCmdID.TAB
-				|| (char.IsWhiteSpace(typedChar) || char.IsPunctuation(typedChar)))
-			{
-				//check for a selection
-				if (session_ != null && !session_.IsDismissed)
-				{
-					//if the selection is fully selected, commit the current session
-					if (session_.SelectedCompletionSet.SelectionStatus.IsSelected)
-					{
-						session_.Commit();
-						//also, don't add the character to the buffer
-						return VSConstants.S_OK;
-					}
-					else
-					{
-						//if there is no selection, dismiss the session
-						session_.Dismiss();
-					}
-				}
-			}
-
-			//pass along the command so the char is added to the buffer
-			int retVal = nextCommandHandler_.Exec(ref pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut);
-			bool handled = false;
-			if (!typedChar.Equals(char.MinValue) && char.IsLetterOrDigit(typedChar))
-			{
-				if (session_ == null || session_.IsDismissed) // If there is no active session, bring up completion
-				{
-					this.TriggerCompletion();
-					session_.Filter();
-				}
-				else    //the completion session is already active, so just filter
-				{
-					session_.Filter();
-				}
-				handled = true;
-			}
-			else if (commandID == (uint)VSConstants.VSStd2KCmdID.BACKSPACE //redo the filter if there is a deletion
-				|| commandID == (uint)VSConstants.VSStd2KCmdID.DELETE)
-			{
-				if (session_ != null && !session_.IsDismissed)
-				{
-					session_.Filter();
-				}
-				handled = true;
-			}
-			if (handled)
-			{
-				return VSConstants.S_OK;
-			}
-			return retVal;
+			return VSConstants.S_OK;
 		}
 
-		private bool TriggerCompletion()
+		public int GetExpansionFunction(IXMLDOMNode xmlFunctionNode, string bstrFieldName, out IVsExpansionFunction pFunc)
 		{
-			//the caret must be in a non-projection location 
-			SnapshotPoint? caretPoint =
-			textView_.Caret.Position.Point.GetPoint(
-			textBuffer => (!textBuffer.ContentType.IsOfType("projection")), PositionAffinity.Predecessor);
-			if (!caretPoint.HasValue)
-			{
-				return false;
-			}
-
-			session_ = provider_.CompletionBroker.CreateCompletionSession(
-				textView_,
-				caretPoint.Value.Snapshot.CreateTrackingPoint(caretPoint.Value.Position, PointTrackingMode.Positive),
-				true);
-
-			//subscribe to the Dismissed event on the session 
-			session_.Dismissed += this.OnSessionDismissed;
-			session_.Start();
-
-			return true;
+			throw new NotImplementedException();
 		}
 
-		private void OnSessionDismissed(object sender, EventArgs e)
+		public int FormatSpan(IVsTextLines pBuffer, TextSpan[] ts)
 		{
-			session_.Dismissed -= this.OnSessionDismissed;
-			session_ = null;
+			throw new NotImplementedException();
 		}
 
+		public int EndExpansion()
+		{
+			throw new NotImplementedException();
+		}
+
+		public int IsValidType(IVsTextLines pBuffer, TextSpan[] ts, string[] rgTypes, int iCountTypes, out int pfIsValidType)
+		{
+			throw new NotImplementedException();
+		}
+
+		public int IsValidKind(IVsTextLines pBuffer, TextSpan[] ts, string bstrKind, out int pfIsValidKind)
+		{
+			throw new NotImplementedException();
+		}
+
+		public int OnBeforeInsertion(IVsExpansionSession pSession)
+		{
+			throw new NotImplementedException();
+		}
+
+		public int OnAfterInsertion(IVsExpansionSession pSession)
+		{
+			throw new NotImplementedException();
+		}
+
+		public int PositionCaretForEditing(IVsTextLines pBuffer, TextSpan[] ts)
+		{
+			throw new NotImplementedException();
+		}
+
+		public int OnItemChosen(string pszTitle, string pszPath)
+		{
+			throw new NotImplementedException();
+		}
+
+		private IOleCommandTarget nextCommandHandler_;
 		private ITextView textView_;
 		private AICompletionHandlerProvider provider_;
-		private IOleCommandTarget nextCommandHandler_;
-		private ICompletionSession session_;
 	}
 }
