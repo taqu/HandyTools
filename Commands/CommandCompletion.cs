@@ -1,23 +1,18 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
 namespace HandyTools.Commands
 {
 	[Command(PackageGuids.HandyToolsString, PackageIds.CommandCompletion)]
-	internal sealed class CommandCompletion : CommandAIBase<CommandCompletion>
+	internal class CommandCompletion : BaseCommand<CommandCompletion>
 	{
-		protected override void Initialize()
+		protected override async Task ExecuteAsync(OleMenuCmdEventArgs e)
 		{
-			Model = Types.TypeModel.Generation;
-		}
 
-		protected override void BeforeRun(SettingFile settingFile)
-		{
-			PromptTemplate = settingFile.PromptCompletion;
-			Response = Types.TypeResponse.Append;
-			FormatResponse = settingFile.FormatResponse;
-		}
-
-		protected override string PostProcessResponse(string response)
-		{
-			return StripResponseMarkdownCode(response);
 		}
 	}
 }
+

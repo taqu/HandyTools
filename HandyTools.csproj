@@ -58,9 +58,10 @@
     <Compile Include="Commands\CommandTranslateAndReplace.cs" />
     <Compile Include="Commands\CommandTranslation.cs" />
     <Compile Include="Completion\AICompletionCommandHandler.cs" />
-    <Compile Include="Completion\AICompletionHandlerProvider .cs" />
+    <Compile Include="Completion\AICompletionCommandHandlerProvider .cs" />
     <Compile Include="Completion\AICompletionSource.cs" />
     <Compile Include="Completion\AICompletionSourceProvider.cs" />
+    <Compile Include="Completion\SnippetUtil.cs" />
     <Compile Include="Models\RefCount.cs" />
     <Compile Include="DefaultPrompts.cs" />
     <Compile Include="Log.cs" />

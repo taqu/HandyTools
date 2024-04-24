@@ -33,5 +33,6 @@ namespace HandyTools
         public const int CommandTranslateAndReplace = 0x0004;
         public const int CommandAddDocument = 0x0005;
         public const int CommandPreviewDocument = 0x0006;
+        public const int CommandLineCompletion = 0x0007;
     }
 }

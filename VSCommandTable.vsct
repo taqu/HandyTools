@@ -79,6 +79,13 @@
 					<ButtonText>Preview Dxygen</ButtonText>
 				</Strings>
 			</Button>
+			<Button guid="HandyTools" id="CommandLineCompletion" priority="0x0006" type="Button">
+				<Icon guid="ImageCatalogGuid" id="Writeable" />
+				<CommandFlag>IconIsMoniker</CommandFlag>
+				<Strings>
+					<ButtonText>Line Completion</ButtonText>
+				</Strings>
+			</Button>
 		</Buttons>
 	</Commands>
 
@@ -111,6 +118,9 @@
 		<CommandPlacement guid="HandyTools" id="CommandPreviewDocument" priority="0x0005">
 			<Parent guid="HandyTools" id="HandyTools_CommandGroup" />
 		</CommandPlacement>
+		<CommandPlacement guid="HandyTools" id="CommandLineCompletion" priority="0x0006">
+			<Parent guid="HandyTools" id="HandyTools_CommandGroup" />
+		</CommandPlacement>
 
 		<CommandPlacement guid="HandyTools" id="HandyTools_ViewMenu" priority="0x0100">
 			<Parent guid="VSMainMenu" id="View.DevWindowsGroup.OtherWindows.Group1"/>
@@ -130,6 +140,7 @@
 		<KeyBinding guid="HandyTools" id="CommandTranslateAndReplace" key1="4" mod1="ALT" editor="guidVSStd97" />
 		<KeyBinding guid="HandyTools" id="CommandAddDocument" key1="5" mod1="ALT" editor="guidVSStd97" />
 		<KeyBinding guid="HandyTools" id="CommandPreviewDocument" key1="6" mod1="ALT" editor="guidVSStd97" />
+		<KeyBinding guid="HandyTools" id="CommandLineCompletion" key1="0" mod1="ALT" editor="guidVSStd97" />
 	</KeyBindings>
 
 	<Symbols>
@@ -148,6 +159,7 @@
 			<IDSymbol name="CommandTranslateAndReplace" value="0x0004" />
 			<IDSymbol name="CommandAddDocument" value="0x0005" />
 			<IDSymbol name="CommandPreviewDocument" value="0x0006" />
+			<IDSymbol name="CommandLineCompletion" value="0x0007" />
 		</GuidSymbol>
 	</Symbols>
 </CommandTable>
