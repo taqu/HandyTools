@@ -1,3 +1,5 @@
+using static HandyTools.SettingFile;
+
 namespace HandyTools.Commands
 {
 	[Command(PackageGuids.HandyToolsString, PackageIds.CommandTranslation)]
@@ -8,7 +10,7 @@ namespace HandyTools.Commands
 			Model = Types.TypeModel.Translation;
 		}
 
-		protected override void BeforeRun(SettingFile settingFile)
+		protected override void BeforeRun(AIModelSettings settingFile)
 		{
 			PromptTemplate = settingFile.PromptTranslation;
 			Response = Types.TypeResponse.Message;

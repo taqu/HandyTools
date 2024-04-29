@@ -2,6 +2,7 @@ using EnvDTE;
 using HandyTools.Models;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
+using static HandyTools.SettingFile;
 
 namespace HandyTools.Commands
 {
@@ -13,7 +14,7 @@ namespace HandyTools.Commands
 			Model = Types.TypeModel.General;
 		}
 
-		protected override void BeforeRun(SettingFile settingFile)
+		protected override void BeforeRun(AIModelSettings settingFile)
 		{
 			PromptTemplate = settingFile.PromptDocumentation;
 			Response = Types.TypeResponse.Append;

@@ -3,6 +3,7 @@ using OpenAI_API.Chat;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Documents;
+using static HandyTools.SettingFile;
 using static HandyTools.Types;
 
 namespace HandyTools.Models
@@ -12,10 +13,10 @@ namespace HandyTools.Models
         public TypeAIAPI APIType => TypeAIAPI.OpenAI;
         public string Model { get { return model_; } set { model_ = value; } }
 
-        public ModelOpenAI(SettingFile settingFile, TypeModel requestType)
+        public ModelOpenAI(AIModelSettings settings, TypeModel requestType)
         {
-            string APIKey = settingFile.ApiKey;
-            string APIEndpoint = settingFile.ApiEndpoint;
+            string APIKey = settings.ApiKey;
+            string APIEndpoint = settings.ApiEndpoint;
 			if (string.IsNullOrEmpty(APIKey))
             {
                 APIKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
@@ -34,7 +35,7 @@ namespace HandyTools.Models
                 apiProvider_ = new OpenAIAPI(APIKey);
                 apiProvider_.ApiUrlFormat = APIEndpoint + "/{0}/{1}";
             }
-            model_ = settingFile.GetModelName(requestType);
+            model_ = settings.GetModelName(requestType);
 		}
 
         public async Task<string> CompletionAsync(string userInput, float temperature, CancellationToken cancellationToken = default)

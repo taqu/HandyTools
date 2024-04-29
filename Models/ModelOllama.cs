@@ -1,6 +1,7 @@
 using OllamaAPI;
 using System.Threading;
 using System.Threading.Tasks;
+using static HandyTools.SettingFile;
 using static HandyTools.Types;
 
 namespace HandyTools.Models
@@ -10,14 +11,14 @@ namespace HandyTools.Models
         public TypeAIAPI APIType => TypeAIAPI.Ollama;
 		public string Model { get { return apiProvider_.Model; } set { apiProvider_.Model = value; } }
 
-		public ModelOllama(SettingFile settingFile, TypeModel requestType)
+		public ModelOllama(AIModelSettings settings, TypeModel requestType)
         {
-			string APIEndpoint = settingFile.ApiEndpoint;
+			string APIEndpoint = settings.ApiEndpoint;
 			if (!string.IsNullOrEmpty(APIEndpoint))
             {
 				APIEndpoint = APIEndpoint.Trim();
             }
-			apiProvider_ = new OllamaProvider(APIEndpoint, settingFile.GetModelName(requestType));
+			apiProvider_ = new OllamaProvider(APIEndpoint, settings.GetModelName(requestType));
 			apiProvider_.Options = new OllamaAPI.Options();
 		}
 

@@ -3,6 +3,7 @@ using Microsoft.VisualStudio.TextManager.Interop;
 using Microsoft.VisualStudio;
 using System.Configuration;
 using System.Windows;
+using static HandyTools.SettingFile;
 
 namespace HandyTools.Commands
 {
@@ -14,7 +15,7 @@ namespace HandyTools.Commands
 			Model = Types.TypeModel.Translation;
 		}
 
-		protected override void BeforeRun(SettingFile settingFile)
+		protected override void BeforeRun(AIModelSettings settingFile)
 		{
 			PromptTemplate = settingFile.PromptTranslation;
 			Response = Types.TypeResponse.Replace;

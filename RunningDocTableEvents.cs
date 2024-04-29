@@ -6,65 +6,31 @@ using EnvDTE;
 using System.IO;
 using System.Text;
 using HandyTools.Commands;
+using Microsoft.VisualStudio.OLE.Interop;
+using Microsoft.VisualStudio.Text;
+using static HandyTools.SettingFile;
+using Microsoft.VisualStudio.TextManager.Interop;
+using Microsoft.VisualStudio.Threading;
 
 namespace HandyTools
 {
     internal class RunningDocTableEvents : IVsRunningDocTableEvents3
     {
-        private readonly HandyToolsPackage package_;
         private readonly RunningDocumentTable runningDocumentTable_;
 
         public RunningDocTableEvents(HandyToolsPackage package)
         {
-            package_ = package;
             runningDocumentTable_ = new RunningDocumentTable(package);
             runningDocumentTable_.Advise(this);
         }
 
-        /**
-        @brief Load a setting for the language
-        */
-        private void LoadSettings(out Types.TypeLineFeed linefeed, Types.TypeLanguage language, out Types.TypeEncoding encoding, string documentPath)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-            linefeed = Types.TypeLineFeed.LF;
-            encoding = Types.TypeEncoding.UTF8;
-
-            //Load from a file
-            Options.OptionPageHandyTools optionPage = package_.Options;
-            if(null == optionPage) {
-                return;
-            }
-            if(optionPage.LoadSettingFile) {
-                SettingFile settingFile = package_.LoadFileSettings(documentPath);
-                if(null != settingFile) {
-                    linefeed = settingFile.Get(language);
-                    encoding = settingFile.Encoding;
-                    return;
-                }
-            }
-            //Otherwise, load from the option page
-            switch(language) {
-            case Types.TypeLanguage.C_Cpp:
-                linefeed = optionPage.LineFeedCpp;
-                break;
-            case Types.TypeLanguage.CSharp:
-                linefeed = optionPage.LineFeedCSharp;
-                break;
-            default:
-                linefeed = optionPage.LineFeedOthers;
-                break;
-            }
-            encoding = optionPage.Encoding;
-        }
-
-        private Document GetCurrentDocument(uint docCookie)
+        private Document GetCurrentDocument(uint docCookie, HandyToolsPackage package)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             //Get the current document
             RunningDocumentInfo runningDocumentInfo = runningDocumentTable_.GetDocumentInfo(docCookie);
             EnvDTE.Document document = null;
-            foreach(EnvDTE.Document doc in package_.DTE.Documents.OfType<EnvDTE.Document>()) {
+            foreach(EnvDTE.Document doc in package.DTE.Documents.OfType<EnvDTE.Document>()) {
                 if(doc.FullName == runningDocumentInfo.Moniker) {
                     document = doc;
                     break;
@@ -91,6 +57,7 @@ namespace HandyTools
 
         public int OnAfterSave(uint docCookie)
         {
+#if false
             Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
             //Get the current document
             EnvDTE.Document document = GetCurrentDocument(docCookie);
@@ -101,7 +68,7 @@ namespace HandyTools
                 return VSConstants.S_OK;
             }
 
-            EnvDTE.TextDocument textDocument = document.Object("TextDocument") as EnvDTE.TextDocument;
+			EnvDTE.TextDocument textDocument = document.Object("TextDocument") as EnvDTE.TextDocument;
             if(null == textDocument) {
                 return VSConstants.S_OK;
             }
@@ -140,11 +107,12 @@ namespace HandyTools
                     EnvDTE.EditPoint editPoint = textDocument.StartPoint.CreateEditPoint();
                     string text = editPoint.GetText(textDocument.EndPoint);
                     UTF8Encoding utf8Encoding = new UTF8Encoding(encoding == Types.TypeEncoding.UTF8BOM);
-                    File.WriteAllText(document.FullName, text, utf8Encoding);
-                } catch {
+					File.WriteAllText(document.FullName, text, utf8Encoding);
+
+				} catch {
                 }
             }
-
+#endif
             return VSConstants.S_OK;
         }
 
@@ -164,31 +132,120 @@ namespace HandyTools
             return VSConstants.S_OK;
         }
 
-        public int OnBeforeSave(uint docCookie)
+        private ITextDocument GetTextDocument(EnvDTE.Document document)
         {
-            Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+			Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
 
-            //Get the current document
-            EnvDTE.Document document = GetCurrentDocument(docCookie);
-            if(null == document) {
+			Community.VisualStudio.Toolkit.Documents documents = Community.VisualStudio.Toolkit.VS.Documents;
+            if(null != documents)
+            {
+				var task = ThreadHelper.JoinableTaskFactory.RunAsync(async ()=>
+				{
+					await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+					return await documents.GetDocumentViewAsync(document.FullName);
+				});
+                DocumentView documentView = task.Join();
+                if (null == documentView || null ==documentView.Document || document.FullName != documentView.FilePath)
+                {
+                    return null;
+				}
+                return documentView.Document;
+			}
+            return null;
+		}
+
+        private void SetEncoding(EnvDTE.Document document, ITextDocument textDocument, TextSettings textSettings)
+        {
+			ThreadHelper.ThrowIfNotOnUIThread();
+			HandyToolsPackage package = HandyToolsPackage.GetPackage();
+			if (null == package)
+			{
+				return;
+			}
+			UtfUnknown.DetectionDetail charsetResult;
+            try {
+                charsetResult = UtfUnknown.CharsetDetector.DetectFromFile(document.FullName).Detected;
+            } catch {
+                return;
+            }
+
+            //Overwrite if needed
+            bool write = false;
+            if(0.5f <= charsetResult.Confidence) {
+                switch(textSettings.Encoding) {
+                case Types.TypeEncoding.UTF8:
+                    if(charsetResult.HasBOM || (System.Text.Encoding.UTF8 != charsetResult.Encoding && System.Text.Encoding.ASCII != charsetResult.Encoding)) {
+                        write = true;
+                    }
+                    break;
+                case Types.TypeEncoding.UTF8BOM:
+                    if(!charsetResult.HasBOM || (System.Text.Encoding.UTF8 != charsetResult.Encoding && System.Text.Encoding.ASCII != charsetResult.Encoding)) {
+                        write = true;
+                    }
+                    break;
+                }
+            } else {
+                write = true;
+            }
+            Log.Output(string.Format("{0} Confidence {1} BOM {2}\n", charsetResult.EncodingName, charsetResult.Confidence, charsetResult.HasBOM));
+
+            if(write) {
+                try
+                {
+					switch (textSettings.Encoding)
+                    {
+                        case Types.TypeEncoding.UTF8:
+							textDocument.Encoding = new UTF8Encoding(false, true);
+                            textDocument.UpdateDirtyState(true, DateTime.Now);
+							break;
+                        case Types.TypeEncoding.UTF8BOM:
+							textDocument.Encoding = new UTF8Encoding(true, true);
+							textDocument.UpdateDirtyState(true, DateTime.Now);
+							break;
+                    }
+                }
+                catch
+                {
+                }
+            }
+		}
+
+		public int OnBeforeSave(uint docCookie)
+        {
+			HandyToolsPackage package = HandyToolsPackage.GetPackage();
+			if (null == package)
+			{
+				return VSConstants.S_OK;
+			}
+			//Get the current document
+			EnvDTE.Document document = GetCurrentDocument(docCookie, package);
+			if (null == document) {
                 return VSConstants.S_OK;
             }
-            if(document.Kind != EnvDTE.Constants.vsDocumentKindText) {
+			ITextDocument itextDocument = GetTextDocument(document);
+            if(null == itextDocument)
+            {
                 return VSConstants.S_OK;
             }
-            ProjectItem projectItem = document.ProjectItem;
-            EnvDTE.TextDocument textDocument = document.Object("TextDocument") as EnvDTE.TextDocument;
+
+			ThreadHelper.ThrowIfNotOnUIThread();
+			TextSettings textSettings = package.GetTextSettings(document.FullName);
+
+			SetEncoding(document, itextDocument, textSettings);
+
+			if (document.Kind != EnvDTE.Constants.vsDocumentKindText) {
+                return VSConstants.S_OK;
+            }
+			EnvDTE.TextDocument textDocument = document.Object("TextDocument") as EnvDTE.TextDocument;
             if(null == textDocument) {
-                return VSConstants.S_OK;
-            }
+				return VSConstants.S_OK;
+			}
+			//Get the current language
+			Types.TypeLanguage language = CodeUtil.GetLanguageFromDocument(document);
 
-            //Get the current language
-            Types.TypeLanguage language = CodeUtil.GetLanguageFromDocument(document);
-
-            //Specify a target line-feed code
-            LoadSettings(out var linefeed, language, out var encoding, document.Path);
-
-            Log.Output(string.Format("doc:{0} => lang:{1} code:{2}\n", document.Language, language, linefeed));
+			//Specify a target line-feed code
+            Types.TypeLineFeed linefeed = textSettings.Get(language);
+			Log.Output(string.Format("doc:{0} => lang:{1} code:{2}\n", document.Language, language, linefeed));
             string replaceLineFeed;
             switch(linefeed) {
             case Types.TypeLineFeed.LF:

@@ -1,25 +1,26 @@
 using HandyTools.Commands;
 using Microsoft.VisualStudio;
+using Microsoft.VisualStudio.Language.Intellisense;
 using Microsoft.VisualStudio.OLE.Interop;
+using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.TextManager.Interop;
 using MSXML;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace HandyTools.Completion
 {
-	internal class AICompletionCommandHandler : IOleCommandTarget, IVsExpansionClient
+	internal class AICompletionCommandHandler : IOleCommandTarget
 	{
 		internal AICompletionCommandHandler(IVsTextView textViewAdapter, ITextView textView, AICompletionCommandHandlerProvider provider)
 		{
 			vsTextView_ = textViewAdapter;
 			textView_ = textView;
 			provider_ = provider;
-
-			//get the text manager from the service provider
-			IVsTextManager2 textManager = provider_.ServiceProvider.GetService(typeof(SVsTextManager)) as IVsTextManager2;
-			textManager.GetExpansionManager(out exManager_);
 
 			//add the command to the command chain
 			textViewAdapter.AddCommandFilter(this, out nextCommandHandler_);
@@ -59,152 +60,185 @@ namespace HandyTools.Completion
 				typedChar = (char)(ushort)Marshal.GetObjectForNativeVariant(pvaIn);
 			}
 
-			//the expansion insertion is handled in OnItemChosen
-			//if the expansion session is still active, handle tab/backtab/return/cancel
-			if (exSession_ != null)
+			//check for a commit character
+			if (!hasCompletionUpdated_ && nCmdID == (uint)VSConstants.VSStd2KCmdID.TAB)
 			{
-				if (nCmdID == (uint)VSConstants.VSStd2KCmdID.BACKTAB)
-				{
-					exSession_.GoToPreviousExpansionField();
-					return VSConstants.S_OK;
-				}
-				else if (nCmdID == (uint)VSConstants.VSStd2KCmdID.TAB)
-				{
 
-					exSession_.GoToNextExpansionField(0); //false to support cycling through all the fields
-					return VSConstants.S_OK;
-				}
-				else if (nCmdID == (uint)VSConstants.VSStd2KCmdID.RETURN || nCmdID == (uint)VSConstants.VSStd2KCmdID.CANCEL)
+				var tagger = GetTagger();
+
+				if (tagger != null)
 				{
-					if (exSession_.EndCurrentExpansion(0) == VSConstants.S_OK)
+					if (tagger.IsSuggestionActive() && tagger.CompleteText())
 					{
-						exSession_ = null;
+						ClearCompletionSessions();
 						return VSConstants.S_OK;
 					}
+					else
+					{
+						tagger.ClearSuggestion();
+					}
 				}
+
 			}
-			//neither an expansion session nor a completion session is open, but we got a tab, so check whether the last word typed is a snippet shortcut 
-			if (exSession_ == null && pguidCmdGroup == PackageGuids.HandyTools && nCmdID == (uint)PackageIds.CommandLineCompletion)
+			else if (nCmdID == (uint)VSConstants.VSStd2KCmdID.RETURN || nCmdID == (uint)VSConstants.VSStd2KCmdID.CANCEL)
 			{
-				//get the word that was just added 
-				//CaretPosition pos = textView_.Caret.Position;
-				//TextExtent word = provider_.NavigatorService.GetTextStructureNavigator(textView_.TextBuffer).GetExtentOfWord(pos.BufferPosition - 1); //use the position 1 space back
-				//string textString = word.Span.GetText(); //the word that was just added
-														 //if it is a code snippet, insert it, otherwise carry on
-				if (InsertAnyExpansion())
+				var tagger = GetTagger();
+				if (tagger != null)
 				{
-					return VSConstants.S_OK;
+					tagger.ClearSuggestion();
 				}
 			}
-			return nextCommandHandler_.Exec(ref pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut);
-		}
 
-		public int GetExpansionFunction(IXMLDOMNode xmlFunctionNode, string bstrFieldName, out IVsExpansionFunction pFunc)
-		{
-			pFunc = null;
-			return VSConstants.S_OK;
-		}
+			CheckSuggestionUpdate(nCmdID);
 
-		public int FormatSpan(IVsTextLines pBuffer, TextSpan[] ts)
-		{
-			return VSConstants.S_OK;
-		}
+			//pass along the command so the char is added to the buffer
+			int retVal = nextCommandHandler_.Exec(ref pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut);
+			bool handled = false;
 
-		public int EndExpansion()
-		{
-			exSession_ = null;
-			return VSConstants.S_OK;
-		}
-
-		public int IsValidType(IVsTextLines pBuffer, TextSpan[] ts, string[] rgTypes, int iCountTypes, out int pfIsValidType)
-		{
-			pfIsValidType = 1;
-			return VSConstants.S_OK;
-		}
-
-		public int IsValidKind(IVsTextLines pBuffer, TextSpan[] ts, string bstrKind, out int pfIsValidKind)
-		{
-			pfIsValidKind = 1;
-			return VSConstants.S_OK;
-		}
-
-		public int OnBeforeInsertion(IVsExpansionSession pSession)
-		{
-			return VSConstants.S_OK;
-		}
-
-		public int OnAfterInsertion(IVsExpansionSession pSession)
-		{
-			return VSConstants.S_OK;
-		}
-
-		public int PositionCaretForEditing(IVsTextLines pBuffer, TextSpan[] ts)
-		{
-			return VSConstants.S_OK;
-		}
-
-		public int OnItemChosen(string pszTitle, string pszPath)
-		{
-			return VSConstants.S_OK;
-		}
-
-		private bool InsertAnyExpansion()
-		{
-			//first get the location of the caret, and set up a TextSpan
-			int endColumn, startLine;
-			//get the column number from  the IVsTextView, not the ITextView
-			vsTextView_.GetCaretPos(out startLine, out endColumn);
-
-			TextSpan addSpan = new TextSpan();
-			addSpan.iStartIndex = endColumn;
-			addSpan.iEndIndex = endColumn;
-			addSpan.iStartLine = startLine;
-			addSpan.iEndLine = startLine;
-
-			//if (shortcut != null) //get the expansion from the shortcut
-			//{
-			//    //reset the TextSpan to the width of the shortcut, 
-			//    //because we're going to replace the shortcut with the expansion
-			//    addSpan.iStartIndex = addSpan.iEndIndex - shortcut.Length;
-
-			//    m_exManager.GetExpansionByShortcut(
-			//        this,
-			//        new Guid(SnippetUtilities.LanguageServiceGuidStr),
-			//        shortcut,
-			//        m_vsTextView,
-			//        new TextSpan[] { addSpan },
-			//        0,
-			//        out path,
-			//        out title);
-
-			//}
-			IVsTextLines textLines;
-			vsTextView_.GetBuffer(out textLines);
-			IVsExpansion bufferExpansion = (IVsExpansion)textLines;
-
-			if (bufferExpansion != null)
+			//gets lsp completions on added character or deletions
+			if (pguidCmdGroup == PackageGuids.HandyTools && commandID == (uint)PackageIds.CommandLineCompletion)
 			{
-				DOMDocument domDoc = SnippetUtil.GenerateSnippetXml("test", "C++");
-				int hr = bufferExpansion.InsertSpecificExpansion(
-					domDoc,
-					addSpan,
-					this,
-					Guid.Empty,
-					null,
-					out exSession_);
-				if (VSConstants.S_OK == hr)
+				_ = Task.Run(() => GetLSPCompletions());
+				handled = true;
+			}
+			else if (!typedChar.Equals(char.MinValue) || commandID == (uint)VSConstants.VSStd2KCmdID.RETURN)
+			{
+				_ = Task.Run(() => GetLSPCompletions());
+				handled = true;
+			}
+			else if (commandID == (uint)VSConstants.VSStd2KCmdID.BACKSPACE || commandID == (uint)VSConstants.VSStd2KCmdID.DELETE)
+			{
+				_ = Task.Run(() => GetLSPCompletions());
+				handled = true;
+			}
+
+			if (handled)
+			{
+				return VSConstants.S_OK;
+			}
+			return retVal;
+		}
+
+		private CompletionTagger GetTagger()
+		{
+			Type key = typeof(CompletionTagger);
+			Microsoft.VisualStudio.Utilities.PropertyCollection props = textView_.TextBuffer.Properties;
+			if (props.ContainsProperty(key))
+			{
+				return props.GetProperty<CompletionTagger>(key);
+			}
+			else
+			{
+				return null;
+			}
+		}
+
+		private void GetLSPCompletions()
+		{
+			SnapshotPoint? caretPoint = textView_.Caret.Position.Point.GetPoint(textBuffer => (!textBuffer.ContentType.IsOfType("projection")), PositionAffinity.Predecessor);
+			if (!caretPoint.HasValue)
+			{
+				return;
+			}
+			int lineN;
+			int characterN;
+			int res = vsTextView_.GetCaretPos(out lineN, out characterN);
+
+			if (res != VSConstants.S_OK)
+			{
+				return;
+			}
+			String untrimLine = textView_.TextBuffer.CurrentSnapshot.GetLineFromLineNumber(lineN).GetText();
+			if (characterN < untrimLine.Length)
+			{
+				String afterCaret = untrimLine.Substring(characterN);
+				String escapedSymbols = Regex.Escape(":(){ },.\"\';");
+
+				String pattern = "[\\s\\t\\n\\r" + escapedSymbols + "]*";
+				Match m = Regex.Match(afterCaret, pattern, RegexOptions.IgnoreCase);
+				if (!(m.Success && m.Index == 0 && m.Length == afterCaret.Length))
+					return;
+			}
+			hasCompletionUpdated_ = false;
+			bool multiline = !IsInline(lineN);
+			if (completionTask_ == null || completionTask_.IsCompleted)
+			{
+				string text = "test";
+				if (completionTask_ == null || completionTask_.IsCompleted)
 				{
-					return true;
+					_ = ShowCompletionAsync(text, lineN, characterN);
 				}
 			}
-			return false;
+		}
+
+		private bool IsInline(int lineNumber)
+		{
+			string text = textView_.TextSnapshot.GetLineFromLineNumber(lineNumber).GetText();
+			return !String.IsNullOrWhiteSpace(text);
+		}
+
+		private async Task ShowCompletionAsync(String text, int lineNumber, int characterNumber)
+		{
+			if (string.IsNullOrEmpty(text))
+			{
+				return;
+			}
+			SnapshotPoint? caretPoint = textView_.Caret.Position.Point.GetPoint(textBuffer => (!textBuffer.ContentType.IsOfType("projection")), PositionAffinity.Predecessor);
+			if (!caretPoint.HasValue)
+			{
+				return;
+			}
+
+			int newLineNumber;
+			int newCharacterNumber;
+			int resCaretPos = vsTextView_.GetCaretPos(out newLineNumber, out newCharacterNumber);
+
+			if (resCaretPos != VSConstants.S_OK || (lineNumber != newLineNumber) || (characterNumber != newCharacterNumber))
+			{
+				return;
+			}
+
+			CompletionTagger tagger = GetTagger();
+			if (null != tagger && !string.IsNullOrEmpty(text))
+			{
+				await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+				//tagger.SetSuggestion(text, IsInline(newLineNumber), newCharacterNumber);
+			}
+		}
+
+		void CheckSuggestionUpdate(uint nCmdID)
+		{
+			switch (nCmdID)
+			{
+				case ((uint)VSConstants.VSStd2KCmdID.UP):
+				case ((uint)VSConstants.VSStd2KCmdID.DOWN):
+				case ((uint)VSConstants.VSStd2KCmdID.PAGEUP):
+				case ((uint)VSConstants.VSStd2KCmdID.PAGEDN):
+					if (provider_.CompletionBroker.IsCompletionActive(textView_))
+					{
+						hasCompletionUpdated_ = true;
+					}
+
+					break;
+				case ((uint)VSConstants.VSStd2KCmdID.TAB):
+				case ((uint)VSConstants.VSStd2KCmdID.RETURN):
+					hasCompletionUpdated_ = false;
+					break;
+			}
+		}
+
+		private void ClearCompletionSessions()
+		{
+			provider_.CompletionBroker.DismissAllSessions(textView_);
 		}
 
 		private IOleCommandTarget nextCommandHandler_;
 		private IVsTextView vsTextView_;
 		private ITextView textView_;
+		private ITextDocument textDocument_;
 		private AICompletionCommandHandlerProvider provider_;
-		private IVsExpansionManager exManager_;
-		private IVsExpansionSession exSession_;
+		private ICompletionSession session_;
+		private bool hasCompletionUpdated_;
+		private Task<string> completionTask_;
 	}
 }

@@ -10,8 +10,188 @@ namespace HandyTools
 {
 	public class SettingFile
 	{
+		public struct TextSettings
+		{
+			public TextSettings()
+			{
+				lineFeeds_ = new Types.TypeLineFeed[Types.NumLanguages] { Types.TypeLineFeed.LF, Types.TypeLineFeed.LF, Types.TypeLineFeed.LF };
+				encoding_ = Types.TypeEncoding.UTF8;
+			}
+
+			public TextSettings(SettingFile settings)
+			{
+				lineFeeds_ = settings.lineFeeds_;
+				encoding_ = settings.encoding_;
+			}
+
+			public Types.TypeLineFeed Get(Types.TypeLanguage language)
+			{
+				return lineFeeds_[(int)language];
+			}
+
+			public Types.TypeEncoding Encoding { get => encoding_; }
+
+			private Types.TypeLineFeed[] lineFeeds_;
+			private Types.TypeEncoding encoding_;
+		};
+
+		public struct AIModelSettings
+		{
+			public AIModelSettings()
+			{
+				lineFeeds_ = new Types.TypeLineFeed[Types.NumLanguages] { Types.TypeLineFeed.LF, Types.TypeLineFeed.LF, Types.TypeLineFeed.LF };
+				encoding_ = Types.TypeEncoding.UTF8;
+			}
+
+			public AIModelSettings(SettingFile settings)
+			{
+				lineFeeds_ = settings.lineFeeds_;
+				encoding_ = settings.encoding_;
+
+				typeAIAPI_ = settings.typeAIAPI_;
+				modelGeneral_ = settings.modelGeneral_;
+				modelGeneration_ = settings.modelGeneration_;
+				modelTranslation_ = settings.modelTranslation_;
+				apiKey_ = settings.apiKey_;
+				apiEndpoint_ = settings.apiEndpoint_;
+				formatResponse_ = settings.formatResponse_;
+				temperature_ = settings.temperature_;
+				maxTextLength_ = settings.maxTextLength_;
+				timeout_ = settings.timeout_;
+				promptCompletion_ = settings.promptCompletion_;
+				promptExplanation_ = settings.promptExplanation_;
+				promptTranslation_ = settings.promptTranslation_;
+				promptDocumentation_ = settings.promptDocumentation_;
+			}
+
+			public Types.TypeLineFeed Get(Types.TypeLanguage language)
+			{
+				return lineFeeds_[(int)language];
+			}
+
+			public Types.TypeEncoding Encoding { get => encoding_; }
+
+			public TypeAIAPI APIType
+			{
+				get { return typeAIAPI_; }
+			}
+
+			public string GetModelName(Types.TypeModel type)
+			{
+				switch (type)
+				{
+					case TypeModel.General:
+						return ModelGeneral;
+					case TypeModel.Generation:
+						return ModelGeneration;
+					case TypeModel.Translation:
+						return ModelTranslation;
+					default:
+						return ModelGeneral;
+				}
+			}
+
+			public string ModelGeneral
+			{
+				get { return modelGeneral_; }
+			}
+
+			public string ModelGeneration
+			{
+				get { return modelGeneration_; }
+			}
+
+			public string ModelTranslation
+			{
+				get { return modelTranslation_; }
+			}
+
+			public string ApiKey
+			{
+				get { return apiKey_; }
+			}
+
+			public string ApiEndpoint
+			{
+				get { return apiEndpoint_; }
+			}
+
+			public bool FormatResponse
+			{
+				get { return formatResponse_; }
+			}
+
+			public float Temperature
+			{
+				get { return temperature_; }
+			}
+
+			public int MaxTextLength
+			{
+				get { return maxTextLength_; }
+			}
+
+			public int Timeout
+			{
+				get { return timeout_; }
+			}
+
+			public string PromptCompletion
+			{
+				get { return promptCompletion_; }
+			}
+
+			public string PromptExplanation
+			{
+				get { return promptExplanation_; }
+			}
+
+			public string PromptTranslation
+			{
+				get { return promptTranslation_; }
+			}
+
+			public string PromptDocumentation
+			{
+				get { return promptDocumentation_; }
+			}
+
+			private Types.TypeLineFeed[] lineFeeds_;
+			private Types.TypeEncoding encoding_;
+
+			private TypeAIAPI typeAIAPI_;
+			private string modelGeneral_ = "llama2";
+			private string modelGeneration_ = "llama2";
+			private string modelTranslation_ = "llama2";
+			private string apiKey_ = string.Empty;
+			private string apiEndpoint_ = string.Empty;
+			private bool formatResponse_ = false;
+			private float temperature_ = 0.1f;
+			private int maxTextLength_ = 4096;
+			private int timeout_ = 30;
+			private string promptCompletion_ = DefaultPrompts.PromptCompletion;
+			private string promptExplanation_ = DefaultPrompts.PromptExplanation;
+			private string promptTranslation_ = DefaultPrompts.PromptTranslation;
+			private string promptDocumentation_ = DefaultPrompts.PromptDocumentation;
+		};
+
 		public const string FileName = "_handytools.xml";
 
+		public bool LoadSettingFile
+		{
+			get
+			{
+				return loadSettingFile_;
+			}
+		}
+
+		public bool OutputDebugLog
+		{
+			get
+			{
+				return outputDebugLog_;
+			}
+		}
 		public Types.TypeLineFeed Get(Types.TypeLanguage language)
 		{
 			return lineFeeds_[(int)language];
@@ -179,7 +359,7 @@ namespace HandyTools
 			ThreadHelper.ThrowIfNotOnUIThread();
 			string directoryPath = System.IO.Path.GetDirectoryName(documentPath);
 			SettingFile settingFile = SetFromSetting(package);
-			if (string.IsNullOrEmpty(directoryPath) || !System.IO.Directory.Exists(directoryPath))
+			if (!settingFile.LoadSettingFile || string.IsNullOrEmpty(directoryPath) || !System.IO.Directory.Exists(directoryPath))
 			{
 				return settingFile;
 			}
@@ -477,6 +657,8 @@ namespace HandyTools
 			Options.OptionPageHandyTools optionPage = package.Options;
 			if (null != optionPage)
 			{
+				settingFile.loadSettingFile_ = optionPage.LoadSettingFile;
+				settingFile.outputDebugLog_ = optionPage.OutputDebugLog;
 				settingFile.lineFeeds_[(int)TypeLanguage.C_Cpp] = optionPage.LineFeedCpp;
 				settingFile.lineFeeds_[(int)TypeLanguage.CSharp] = optionPage.LineFeedCSharp;
 				settingFile.lineFeeds_[(int)TypeLanguage.C_Cpp] = optionPage.LineFeedOthers;
@@ -525,6 +707,8 @@ namespace HandyTools
 
 		private static System.Collections.Generic.Dictionary<string, CacheEntry> fileToSettings_ = new System.Collections.Generic.Dictionary<string, CacheEntry>(MaxCaches);
 
+		private bool loadSettingFile_ = true;
+		private bool outputDebugLog_ = false;
 		private Types.TypeLineFeed[] lineFeeds_ = new Types.TypeLineFeed[Types.NumLanguages] { Types.TypeLineFeed.LF, Types.TypeLineFeed.LF, Types.TypeLineFeed.LF };
 		private Types.TypeEncoding encoding_ = Types.TypeEncoding.UTF8;
 	}

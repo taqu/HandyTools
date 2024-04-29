@@ -5,6 +5,7 @@ using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 using System.Linq;
 using System.Text.RegularExpressions;
+using static HandyTools.SettingFile;
 using static HandyTools.Types;
 
 namespace HandyTools.Commands
@@ -43,7 +44,7 @@ namespace HandyTools.Commands
 			}
 			Initialize();
 			DocumentView documentView = await VS.Documents.GetActiveDocumentViewAsync();
-			(RefCount<ModelBase> model, SettingFile settingFile) = package.GetAIModel(Model, documentView.FilePath);
+			(RefCount<ModelBase> model,  SettingFile.AIModelSettings settingFile) = package.GetAIModel(Model, documentView.FilePath);
 			if (null == model)
 			{
 				await VS.MessageBox.ShowAsync("Failed to load AI model. Please check settings.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
@@ -239,7 +240,7 @@ namespace HandyTools.Commands
 		{
 		}
 
-		protected virtual void BeforeRun(SettingFile settingFile)
+		protected virtual void BeforeRun(AIModelSettings settingFile)
 		{
 		}
 

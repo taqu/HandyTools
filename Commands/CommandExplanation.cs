@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static HandyTools.SettingFile;
 
 namespace HandyTools.Commands
 {
@@ -15,7 +16,7 @@ namespace HandyTools.Commands
 			ExtractDefinition = true;
 		}
 
-		protected override void BeforeRun(SettingFile settingFile)
+		protected override void BeforeRun(AIModelSettings settingFile)
 		{
 			PromptTemplate = settingFile.PromptExplanation;
 			Response = Types.TypeResponse.Message;

@@ -5,9 +5,11 @@ global using Task = System.Threading.Tasks.Task;
 using HandyTools.Models;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TextManager.Interop;
+using System.ComponentModel.Composition;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using static HandyTools.SettingFile;
 using static HandyTools.Types;
 
 namespace HandyTools
@@ -33,6 +35,7 @@ namespace HandyTools
 	[InstalledProductRegistration(Vsix.Name, Vsix.Description, Vsix.Version)]
 	[Guid(HandyToolsPackage.PackageGuidString)]
 	[ProvideAutoLoad(UIContextGuids.SolutionExists, PackageAutoLoadFlags.BackgroundLoad)]
+	[ProvideAutoLoad(UIContextGuids.CodeWindow, PackageAutoLoadFlags.BackgroundLoad)]
 	[ProvideMenuResource("Menus.ctmenu", 1)]
 	[ProvideOptionPage(typeof(Options.OptionPageHandyTools), "HandyTools", "General", 0, 0, true)]
 	[ProvideOptionPage(typeof(Options.OptionPageHandyToolsAI), "HandyTools", "AI", 1, 1, true)]
@@ -45,6 +48,25 @@ namespace HandyTools
 		public const string PackageGuidString = PackageGuids.HandyToolsString;
 
 		#region Package Members
+
+		public static HandyToolsPackage GetPackage()
+		{
+			ThreadHelper.ThrowIfNotOnUIThread();
+			HandyToolsPackage package;
+			if (package_.TryGetTarget(out package))
+			{
+				return package;
+			}
+			IVsShell shell = GetGlobalService(typeof(SVsShell)) as IVsShell;
+			if(null == shell)
+			{
+				return null;
+			}
+			IVsPackage vsPackage = null;
+			Guid PackageToBeLoadedGuid = new Guid(HandyToolsPackage.PackageGuidString);
+			shell.LoadPackage(ref PackageToBeLoadedGuid, out vsPackage);
+			return vsPackage as HandyToolsPackage;
+		}
 
 		public static WeakReference<HandyToolsPackage> Package { get => package_; }
 
@@ -67,63 +89,72 @@ namespace HandyTools
 			}
 		}
 
-		public SettingFile LoadFileSettings(string documentPath)
+		public TextSettings GetTextSettings(string documentPath)
 		{
 			Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-			return SettingFile.Load(package_, documentPath);
+			lock (lockObject_)
+			{
+				SettingFile settingFile = SettingFile.Load(package_, documentPath);
+				return new TextSettings(settingFile);
+			}
 		}
 
-		public (RefCount<ModelBase>, SettingFile) GetAIModel(TypeModel type, string documentPath)
+		public (RefCount<ModelBase>, SettingFile.AIModelSettings) GetAIModel(TypeModel type, string documentPath)
 		{
 			Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-			SettingFile settingFile = LoadFileSettings(documentPath);
+			AIModelSettings aiModelSettings;
+			lock (lockObject_)
+			{
+				SettingFile settingFile = SettingFile.Load(package_, documentPath);
+				aiModelSettings = new AIModelSettings(settingFile);
+			}
             if (null != aiModel_)
             {
                 switch (aiModel_.Get().APIType)
                 {
                 case Types.TypeAIAPI.OpenAI:
-                    if (settingFile.APIType == Types.TypeAIAPI.OpenAI)
+                    if (aiModelSettings.APIType == Types.TypeAIAPI.OpenAI)
                     {
 					if (aiModel_.Count <= 0)
 					{
-							(aiModel_.Get() as ModelOpenAI).Model = settingFile.GetModelName(type);
+							(aiModel_.Get() as ModelOpenAI).Model = aiModelSettings.GetModelName(type);
 					}
 						aiModel_.AddRef();
-                        return (aiModel_, settingFile);
+                        return (aiModel_, aiModelSettings);
                     }
                     break;
                 case Types.TypeAIAPI.Ollama:
-                    if (settingFile.APIType == Types.TypeAIAPI.Ollama)
+                    if (aiModelSettings.APIType == Types.TypeAIAPI.Ollama)
                     {
 						if (aiModel_.Count <= 0)
 					{
-							(aiModel_.Get() as ModelOllama).Model = settingFile.GetModelName(type);
+							(aiModel_.Get() as ModelOllama).Model = aiModelSettings.GetModelName(type);
 					}
 						aiModel_.AddRef();
-                        return (aiModel_, settingFile);
+                        return (aiModel_, aiModelSettings);
                     }
                     break;
                 default:
-                    return (null, settingFile);
+                    return (null, aiModelSettings);
                 }
             }
-			switch (settingFile.APIType)
+			switch (aiModelSettings.APIType)
 			{
 				case Types.TypeAIAPI.OpenAI:
-					if (string.IsNullOrEmpty(settingFile.ApiKey))
+					if (string.IsNullOrEmpty(aiModelSettings.ApiKey))
 					{
-						return (null, settingFile);
+						return (null, aiModelSettings);
 					}
-					aiModel_ = new RefCount<ModelBase>(new ModelOpenAI(settingFile, type));
+					aiModel_ = new RefCount<ModelBase>(new ModelOpenAI(aiModelSettings, type));
 					break;
 				case Types.TypeAIAPI.Ollama:
-					aiModel_ = new RefCount<ModelBase>(new ModelOllama(settingFile, type));
+					aiModel_ = new RefCount<ModelBase>(new ModelOllama(aiModelSettings, type));
 					break;
 				default:
-					return (null, settingFile);
+					return (null, aiModelSettings);
 			}
 			aiModel_.AddRef();
-			return (aiModel_, settingFile);
+			return (aiModel_, aiModelSettings);
 		}
 
 		public async Task<SVsServiceProvider> GetServiceProviderAsync()
@@ -131,9 +162,10 @@ namespace HandyTools
 			return await GetServiceAsync(typeof(SVsServiceProvider)) as SVsServiceProvider;
 		}
 
-		public IVsTextManager GetTextManager() {
+		public IVsTextManager GetTextManager()
+		{
 			return ToolkitPackage.GetGlobalService(typeof(SVsTextManager)) as IVsTextManager;
-				}
+		}
 
 		static private WeakReference<HandyToolsPackage> package_;
 		private EnvDTE80.DTE2 dte2_;
@@ -142,8 +174,9 @@ namespace HandyTools
 		private EnvDTE.SolutionEvents solutionEvents_;
 		private EnvDTE.ProjectItemsEvents projectItemsEvents_;
 		private RefCount<ModelBase> aiModel_;
+		private object lockObject_ = new object();
 
-		/// <summary>
+ 		/// <summary>
 		/// Initialization of the package; this method is called right after the package is sited, so this is the place
 		/// where you can put all the initialization code that rely on services provided by VisualStudio.
 		/// </summary>
