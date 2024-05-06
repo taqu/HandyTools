@@ -451,6 +451,32 @@ namespace HandyTools.Commands
             }
             return text.Substring(0, i);
         }
+
+        public static (string, string) GetNextCompletion(string text)
+        {
+            System.Diagnostics.Debug.Assert(null != text);
+            int wordStart = 0;
+            for(int i=0; i<text.Length; ++i)
+            {
+                if (!char.IsWhiteSpace(text[i]))
+                {
+                    break;
+                }
+                ++wordStart;
+			}
+			int wordEnd = wordStart;
+			for (int i = wordEnd; i < text.Length; ++i)
+			{
+				if (char.IsWhiteSpace(text[i]))
+				{
+					break;
+				}
+				++wordEnd;
+			}
+            string prefix = text.Substring(0, wordEnd);
+			string suffix = text.Substring(wordEnd);
+            return (prefix, suffix);
+		}
     }
 }
 

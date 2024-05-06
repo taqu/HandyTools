@@ -39,8 +39,8 @@ namespace HandyTools.Completion
 		private int suggestionIndex_;
 		private int insertionPoint_;
 		private int userIndex_;
-		private String userEndingText_;
-		private static Tuple<String, String[]> suggestion = null;
+		private string userEndingText_;
+		private static Tuple<string, string[]> suggestion = null;
 
 		public CompletionTagger(IWpfTextView view, ITextBuffer buffer)
 		{
@@ -61,7 +61,7 @@ namespace HandyTools.Completion
 			this.view_.Caret.PositionChanged += OnViewCaretUpdate;
 		}
 
-		public void SetSuggestion(String newSuggestion, bool inline, int caretPoint)
+		public void SetSuggestion(string newSuggestion, bool inline, int caretPoint)
 		{
 			ClearSuggestion();
 			inlineSuggestion_ = inline;
@@ -70,16 +70,16 @@ namespace HandyTools.Completion
 
 			if (lineN < 0) return;
 
-			String untrim = buffer_.CurrentSnapshot.GetLineFromLineNumber(lineN).GetText();
-			String line = untrim.TrimStart();
+			string untrim = buffer_.CurrentSnapshot.GetLineFromLineNumber(lineN).GetText();
+			string line = untrim.TrimStart();
 			int offset = untrim.Length - line.Length;
 
 			caretPoint = Math.Max(0, caretPoint - offset);
 
-			String combineSuggestion = line + newSuggestion;
+			string combineSuggestion = line + newSuggestion;
 			if (line.Length - caretPoint > 0)
 			{
-				String currentText = line.Substring(0, caretPoint);
+				string currentText = line.Substring(0, caretPoint);
 				combineSuggestion = currentText + newSuggestion;
 				userEndingText_ = line.Substring(caretPoint).TrimEnd();
 				var userIndex = newSuggestion.IndexOf(userEndingText_);
@@ -98,7 +98,7 @@ namespace HandyTools.Completion
 				isTextInsertion_ = false;
 			}
 
-			suggestion = new Tuple<String, String[]>(combineSuggestion, combineSuggestion.Split('\n'));
+			suggestion = new Tuple<string, string[]>(combineSuggestion, combineSuggestion.Split('\n'));
 			Update();
 		}
 
@@ -441,8 +441,8 @@ namespace HandyTools.Completion
 			ITextSnapshot newSnapshot = buffer_.CurrentSnapshot;
 			snapshot_ = newSnapshot;
 
-			String untrimLine = newSnapshot.GetLineFromLineNumber(textLineN).GetText();
-			String line = untrimLine.TrimStart();
+			string untrimLine = newSnapshot.GetLineFromLineNumber(textLineN).GetText();
+			string line = untrimLine.TrimStart();
 
 			int suggestionIndex = CheckSuggestion(suggestion.Item1, line);
 			if (0<=suggestionIndex)
@@ -466,16 +466,30 @@ namespace HandyTools.Completion
 				return false;
 			}
 
-			String untrimLine = snapshot_.GetLineFromLineNumber(currentTextLineNumber_).GetText();
-			String line = untrimLine.Trim();
+			string untrimLine = snapshot_.GetLineFromLineNumber(currentTextLineNumber_).GetText();
+			string line = untrimLine.Trim();
 
 			int suggestionLineN = CheckSuggestion(suggestion.Item1, line);
 			if (0<=suggestionLineN)
 			{
 				int diff = untrimLine.Length - untrimLine.TrimStart().Length;
-				string whitespace = String.IsNullOrWhiteSpace(untrimLine) ? string.Empty : untrimLine.Substring(0, diff);
+				string whitespace = string.IsNullOrWhiteSpace(untrimLine) ? string.Empty : untrimLine.Substring(0, diff);
+#if true
+				(string prefix, string suffix) = Commands.CodeUtil.GetNextCompletion(suggestion.Item1);
+				if (string.IsNullOrEmpty(prefix))
+				{
+					return true;
+				}
+				ReplaceText(whitespace + prefix, currentTextLineNumber_);
+				if (string.IsNullOrEmpty(suffix))
+				{
+					return true;
+				}
+				SetSuggestion(suffix, true, view_.Caret.Position.BufferPosition.Position);
+#else
 				ReplaceText(whitespace + suggestion.Item1, currentTextLineNumber_);
 				return true;
+#endif
 			}
 
 			return false;
@@ -488,11 +502,11 @@ namespace HandyTools.Completion
 			ITextEdit edit = view_.BufferGraph.TopBuffer.CreateEdit();
 			int spanLength = span.Length;
 			edit.Replace(span, text);
-			ITextSnapshot newSnapshot = edit.Apply();
+			edit.Apply();
 
 			if (spanLength == 0 && 0<text.Length)
 			{
-				view_.Caret.MoveToPreviousCaretPosition();
+				//view_.Caret.MoveToPreviousCaretPosition();
 				view_.Caret.MoveToNextCaretPosition();
 			}
 		}
@@ -500,7 +514,6 @@ namespace HandyTools.Completion
 		void ShowSuggestion(String text, int suggestionLineStart)
 		{
 			UpdateAdornment(view_, text, suggestionLineStart);
-
 			showSuggestion_ = true;
 			MarkDirty();
 		}
