@@ -2,6 +2,7 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Editor.OptionsExtensionMethods;
 using Microsoft.VisualStudio.Text.Tagging;
+using Microsoft.VisualStudio.Threading;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -127,7 +128,7 @@ namespace HandyTools.Completion
 			}
 			else
 			{
-				return "";
+				return string.Empty;
 			}
 		}
 
@@ -171,7 +172,7 @@ namespace HandyTools.Completion
 			yield return new TagSpan<CompletionTag>(span, new CompletionTag(0, 0, 0, 0, height, PositionAffinity.Predecessor, stackPanel_, this));
 		}
 
-		void OnBufferChanged(object sender, TextContentChangedEventArgs e)
+		private void OnBufferChanged(object sender, TextContentChangedEventArgs e)
 		{
 			if (e.After != buffer_.CurrentSnapshot)
 			{
@@ -180,7 +181,7 @@ namespace HandyTools.Completion
 			Update();
 		}
 
-		TextRunProperties GetTextFormat()
+		private TextRunProperties GetTextFormat()
 		{
 			Microsoft.VisualStudio.Text.Formatting.IWpfTextViewLine line = view_.TextViewLines.FirstVisibleLine;
 			return line.GetCharacterFormatting(line.Start);
@@ -197,18 +198,19 @@ namespace HandyTools.Completion
 			}
 		}
 
-		String ConvertTabsToSpaces(string text)
+		private String ConvertTabsToSpaces(string text)
 		{
 			int tabSize = view_.Options.GetTabSize();
 			return Regex.Replace(text, "\t", new string(' ', tabSize));
 		}
-		void FormatTextBlock(TextBlock textBlock)
+
+		private void FormatTextBlock(TextBlock textBlock)
 		{
 			textBlock.FontStyle = FontStyles.Normal;
 			textBlock.FontWeight = FontWeights.Normal;
 		}
 
-		TextBlock CreateTextBox(string text, Brush textColour)
+		private TextBlock CreateTextBox(string text, Brush textColour)
 		{
 			TextBlock textBlock = new TextBlock();
 			textBlock.Inlines.Add(item: new Run(text) { Foreground = textColour });
@@ -216,7 +218,7 @@ namespace HandyTools.Completion
 			return textBlock;
 		}
 
-		void AddSuffixTextBlocks(int start, string line, string userText)
+		private void AddSuffixTextBlocks(int start, string line, string userText)
 		{
 			if (line.Length <= suggestionIndex_)
 				return;
@@ -236,7 +238,7 @@ namespace HandyTools.Completion
 			stackPanel_.Children.Add(textBlock);
 		}
 
-		void AddInsertionTextBlock(int start, int end, string line)
+		private void AddInsertionTextBlock(int start, int end, string line)
 		{
 			if (line.Length <= suggestionIndex_)
 				return;
@@ -296,7 +298,7 @@ namespace HandyTools.Completion
 			}
 			catch (ArgumentOutOfRangeException e)
 			{
-				Debug.Write(e);
+				Log.Output(string.Format("{0}\n", e.ToString()));
 			}
 		}
 
@@ -329,25 +331,27 @@ namespace HandyTools.Completion
 			}
 		}
 
-		int GetOccurrenceOfLetter(String s, char c)
+		private int GetOccurrenceOfLetter(String s, char c)
 		{
 			int n = 0;
-			for (int i = 0; (i = s.IndexOf(c, i)) >= 0; ++i,++n) { }
+			for (int i = 0; (i = s.IndexOf(c, i)) >= 0; ++i, ++n) { }
 			return n;
 		}
 
-		int NextNonWhitespace(String s, int index)
+		private int NextNonWhitespace(String s, int index)
 		{
-			for (; index < s.Length && Char.IsWhiteSpace(s[index]); ++index) ; ;
+			for (; index < s.Length && Char.IsWhiteSpace(s[index]); ++index)
+			{
+			}
 			return index;
 		}
 
-		bool IsNameChar(char c)
+		private bool IsNameChar(char c)
 		{
 			return Char.IsLetterOrDigit(c) || c == '_';
 		}
 
-		Tuple<int, int> CompareStrings(String a, String b)
+		private Tuple<int, int> CompareStrings(String a, String b)
 		{
 			int a_index = 0, b_index = 0;
 			while (a_index < a.Length && b_index < b.Length)
@@ -382,7 +386,7 @@ namespace HandyTools.Completion
 			return new Tuple<int, int>(a_index, b_index);
 		}
 
-		int CheckSuggestion(String suggestion, String line)
+		private int CheckSuggestion(String suggestion, String line)
 		{
 			if (line.Length == 0)
 			{
@@ -405,7 +409,7 @@ namespace HandyTools.Completion
 			}
 		}
 
-		int GetCurrentTextLine()
+		private int GetCurrentTextLine()
 		{
 			CaretPosition caretPosition = view_.Caret.Position;
 
@@ -441,7 +445,7 @@ namespace HandyTools.Completion
 			String line = untrimLine.TrimStart();
 
 			int suggestionIndex = CheckSuggestion(suggestion.Item1, line);
-			if (suggestionIndex >= 0)
+			if (0<=suggestionIndex)
 			{
 				currentTextLineNumber_ = textLineN;
 				suggestionIndex_ = suggestionIndex;
@@ -466,7 +470,7 @@ namespace HandyTools.Completion
 			String line = untrimLine.Trim();
 
 			int suggestionLineN = CheckSuggestion(suggestion.Item1, line);
-			if (suggestionLineN >= 0)
+			if (0<=suggestionLineN)
 			{
 				int diff = untrimLine.Length - untrimLine.TrimStart().Length;
 				string whitespace = String.IsNullOrWhiteSpace(untrimLine) ? string.Empty : untrimLine.Substring(0, diff);
@@ -537,9 +541,9 @@ namespace HandyTools.Completion
 			SnapshotSpan span = new SnapshotSpan(startLine.Start, endLine.EndIncludingLineBreak).
 			TranslateTo(targetSnapshot: newSnapshot, SpanTrackingMode.EdgePositive);
 
-			if (this.TagsChanged != null)
+			if (TagsChanged != null)
 			{
-				this.TagsChanged(this, new SnapshotSpanEventArgs(span));
+				TagsChanged(this, new SnapshotSpanEventArgs(span));
 			}
 		}
 	}

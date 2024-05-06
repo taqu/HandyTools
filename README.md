@@ -6,7 +6,7 @@ Some tools for code editing.
 - Unify file's line feed
 - Unify file's character encoding
 - Editing command with LLM
-  - Support OpenAI API and Ollama API
+  - Support OpenAI API
   - Support local API endpoint
 - Others
   - Load settings from a file. Able to use an individual setting for each projects.
@@ -17,7 +17,7 @@ Just right click on the target code, and select command from Handy Tools submenu
 
 | Command          | Place                 | Description                                                        |
 | :------          | :----                 | :----------                                                        |
-| Complete         | Selection or one line | Complete after the selection or one line if nothing selected.      |
+| Complete         | Selection or one line | Fill in the middle at the cursor position.                         |
 | Explain Function | Selection or one line | Explain a funciton which the selection or one line is overlapping. |
 | Translate        | Selection             | Translate the selected text on the chat view.                      |
 | Add Doxygen      | Selection or one line | Add Doxygen style document for a function,                         |
@@ -51,17 +51,15 @@ Just right click on the target code, and select command from Handy Tools submenu
 | :---   | :---                    | :----------                                                     | :------ |
 | API    | API Endpoint            | Endpoint Address                                                | empty   |
 |        | API Key                 | API Key                                                         | XXX     |
-|        | API Type                | OpenAI or Ollama                                                | OpenAI  |
 | Model  | Format After Generation | Whether format text after generation                            | false   |
 |        | Completion Model Name   | Model for completion tasks                                      | llama2  |
 |        | Max Text Length         | Max text length for passing to LLM (in chars, not context size) | llama2  |
 |        | Model Name              | Model for general tasks                                         | llama2  |
 |        | Temperature             | Temperature in generation parameters                            | 0.1     |
 |        | Translation Model Name  | Model for translation tasks                                     | llama2  |
-| Prompt | Completion              | Prompt for completion tasks                                    |         |
-|        | Documentation           | Prompt for documentation tasks                                 |         |
-|        | Explanation             | Prompt for explanation tasks                                   |         |
-|        | Translation             | Prompt for translation tasks                                   |         |
+| Prompt | Documentation           | Prompt for documentation tasks                                  |         |
+|        | Explanation             | Prompt for explanation tasks                                    |         |
+|        | Translation             | Prompt for translation tasks                                    |         |
 
 ### Setting File
 Try to find a setting file,
@@ -93,35 +91,12 @@ An example general setting file "_handytools.xml" is below,
 ```
 
 #### General Settings
-An example settings for [Ollama](https://ollama.com/) endpoint,
+An example settings for OpenAI API endpoint,
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <HandyTools>
 	<AI>
-		<!-- valid values: OpenAI or Ollama -->
-		<APIType>Ollama</APIType>
-		<ModelGeneral>llama2</ModelGeneral>
-		<ModelGeneration>llama2</ModelGeneration>
-		<ModelTranslation>llama2</ModelTranslation>
-		<ApiKey>XXX</ApiKey>
-		<ApiEndpoint>http://localhost:11434</ApiEndpoint>
-		<PromptCompletion>Complete the next {filetype} code. Write only the code, not the explanation.\ncode:{content}</PromptCompletion>
-		<PromptExplanation>Explain the next {filetype} code.\ncode:{content}</PromptExplanation>
-		<PromptTranslation>Translate in English\n\n{content}</PromptTranslation>
-		<PromptDocumentation>Create a doxygen comment for the following C++ Function. doxygen comment only\n\n{content}</PromptDocumentation>
-		<Temperature>0.1</Temperature>
-        <MaxTextLength>4096</MaxTextLength>
-	</AI>
-</HandyTools>
-```
-
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<HandyTools>
-	<AI>
-		<!-- valid values: OpenAI or Ollama -->
-		<APIType>OpenAI</APIType>
 		<ModelGeneral>gpt3.5-turbo</ModelGeneral>
 		<ModelGeneration>gpt3.5-turbo</ModelGeneration>
 		<ModelTranslation>gpt3.5-turbo</ModelTranslation>

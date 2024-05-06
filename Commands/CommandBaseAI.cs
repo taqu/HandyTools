@@ -14,16 +14,16 @@ namespace HandyTools.Commands
 	{
 		internal class CancelCallback : IVsThreadedWaitDialogCallback
 		{
-			public CancelCallback(RefCount<ModelBase> model)
+			public CancelCallback(ModelOpenAI model)
 			{
 				model_ = model;
 			}
 
 			public void OnCanceled()
 			{
-				model_.Release();
+				HandyToolsPackage.Release(model_);
 			}
-			private RefCount<ModelBase> model_;
+			private ModelOpenAI model_;
 		}
 
 		protected string PromptTemplate { get; set; } = string.Empty; //{filetype}: file type name, {content}: content text
@@ -44,16 +44,10 @@ namespace HandyTools.Commands
 			}
 			Initialize();
 			DocumentView documentView = await VS.Documents.GetActiveDocumentViewAsync();
-			(RefCount<ModelBase> model,  SettingFile.AIModelSettings settingFile) = package.GetAIModel(Model, documentView.FilePath);
+			(ModelOpenAI model,  SettingFile.AIModelSettings settingFile) = package.GetAIModel(Model, documentView.FilePath);
 			if (null == model)
 			{
 				await VS.MessageBox.ShowAsync("Failed to load AI model. Please check settings.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
-				return;
-			}
-			if (1 < model.Count)
-			{
-				model.Release();
-				await VS.MessageBox.ShowAsync("Handy Tools is already running.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
 				return;
 			}
 			MaxTextLength = settingFile.MaxTextLength;
@@ -119,7 +113,7 @@ namespace HandyTools.Commands
 			return documentView.TextView.Selection.SelectedSpans.FirstOrDefault();
 		}
 
-		protected virtual async Task RunTaskAsync(IVsThreadedWaitDialog4 waitDialog, RefCount<ModelBase> model, DocumentView documentView, SnapshotSpan selection)
+		protected virtual async Task RunTaskAsync(IVsThreadedWaitDialog4 waitDialog, ModelOpenAI model, DocumentView documentView, SnapshotSpan selection)
 		{
 			using IDisposable disposable = waitDialog as IDisposable;
 			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -150,7 +144,7 @@ namespace HandyTools.Commands
 			}
 			if (string.IsNullOrEmpty(text))
 			{
-				model.Release();
+				HandyToolsPackage.Release(model);
 				waitDialog.EndWaitDialog();
 				await VS.MessageBox.ShowAsync("Handy Tools: Please select text or not empty line.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
 				throw new Exception("Please select text or not empty line.");
@@ -169,25 +163,27 @@ namespace HandyTools.Commands
 			waitDialog.UpdateProgress("In progress", "Handy Tools: 1/3 steps", "Handy Tools: 1/3 steps", 1, 3, true, out canceled);
 			if (canceled)
 			{
+				HandyToolsPackage.Release(model);
 				waitDialog.EndWaitDialog();
 				return;
 			}
 			string response = string.Empty;
 			try
 			{
-				response = await model.Get().CompletionAsync(prompt, Temperature);
+				response = await model.CompletionAsync(prompt, Temperature);
 				response = PostProcessResponse(response);
 
 				waitDialog.UpdateProgress("In progress", "Handy Tools: 2/3 steps", "Handy Tools: 2/3 steps", 2, 3, true, out canceled);
 				if (canceled)
 				{
+					HandyToolsPackage.Release(model);
 					waitDialog.EndWaitDialog();
 					return;
 				}
 			}
 			catch (Exception ex)
 			{
-				model.Release();
+				HandyToolsPackage.Release(model);
 				waitDialog.EndWaitDialog();
 				await VS.MessageBox.ShowAsync("Handy Tools: " + ex.Message, buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
 				throw ex;
@@ -225,7 +221,7 @@ namespace HandyTools.Commands
 
 				(await VS.GetServiceAsync<DTE, DTE>()).ExecuteCommand("Edit.FormatSelection");
 			}
-			model.Release();
+			HandyToolsPackage.Release(model);
 			waitDialog.UpdateProgress("In progress", "Handy Tools: 3/3 steps", "Handy Tools: 3/3 steps", 3, 3, true, out _);
 			waitDialog.EndWaitDialog();
 		}

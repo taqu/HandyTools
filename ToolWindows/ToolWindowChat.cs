@@ -13,9 +13,10 @@ namespace HandyTools.ToolWindows
 
         public override Type PaneType => typeof(Pane);
 
-        public override async Task<FrameworkElement> CreateAsync(int toolWindowId, CancellationToken cancellationToken)
+		public override async Task<FrameworkElement> CreateAsync(int toolWindowId, CancellationToken cancellationToken)
         {
-            return new ToolWindowChatControl();
+			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
+			return new ToolWindowChatControl();
         }
 
         [Guid("94f9430a-5132-4450-af03-31764ba8ed9e")]

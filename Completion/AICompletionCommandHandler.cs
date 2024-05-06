@@ -1,16 +1,15 @@
+using Community.VisualStudio.Toolkit;
 using HandyTools.Commands;
+using HandyTools.Models;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Language.Intellisense;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
-using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.TextManager.Interop;
-using MSXML;
 using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using static System.Net.Mime.MediaTypeNames;
+using System.Windows.Media.TextFormatting;
 
 namespace HandyTools.Completion
 {
@@ -36,7 +35,7 @@ namespace HandyTools.Completion
 					// make the Insert Snippet command appear on the context menu 
 					if (prgCmds[0].cmdID == (uint)PackageIds.CommandLineCompletion)
 					{
-						prgCmds[0].cmdf = (int)Constants.MSOCMDF_ENABLED | (int)Constants.MSOCMDF_SUPPORTED;
+						prgCmds[0].cmdf = (int)Microsoft.VisualStudio.OLE.Interop.Constants.MSOCMDF_ENABLED | (int)Microsoft.VisualStudio.OLE.Interop.Constants.MSOCMDF_SUPPORTED;
 						return VSConstants.S_OK;
 					}
 				}
@@ -93,28 +92,50 @@ namespace HandyTools.Completion
 
 			//pass along the command so the char is added to the buffer
 			int retVal = nextCommandHandler_.Exec(ref pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut);
-			bool handled = false;
+			if (InProcessingCompletionTask())
+			{
+				return retVal;
+			}
+			{
+				if (3600.0 < (DateTime.Now - lastUpdateSettingsTime_).TotalSeconds)
+				{
+					DocumentView documentView = vsTextView_.ToDocumentView();
+					if (null == documentView)
+					{
+						return retVal;
+					}
+					HandyToolsPackage package;
+					if (null != documentView && HandyToolsPackage.Package.TryGetTarget(out package))
+					{
+						lastUpdateSettingsTime_ = DateTime.Now;
+						AIModelSettings_ = package.GetAISettings(documentView.FilePath);
+					}
+				}
 
-			//gets lsp completions on added character or deletions
-			if (pguidCmdGroup == PackageGuids.HandyTools && commandID == (uint)PackageIds.CommandLineCompletion)
-			{
-				_ = Task.Run(() => GetLSPCompletions());
-				handled = true;
-			}
-			else if (!typedChar.Equals(char.MinValue) || commandID == (uint)VSConstants.VSStd2KCmdID.RETURN)
-			{
-				_ = Task.Run(() => GetLSPCompletions());
-				handled = true;
-			}
-			else if (commandID == (uint)VSConstants.VSStd2KCmdID.BACKSPACE || commandID == (uint)VSConstants.VSStd2KCmdID.DELETE)
-			{
-				_ = Task.Run(() => GetLSPCompletions());
-				handled = true;
-			}
-
-			if (handled)
-			{
-				return VSConstants.S_OK;
+				bool handled = false;
+				//gets completions on added character or deletions
+				if (pguidCmdGroup == PackageGuids.HandyTools && commandID == (uint)PackageIds.CommandLineCompletion)
+				{
+					_ = Task.Run(() => GetCompletionsAsync());
+					handled = true;
+				}
+				else if (AIModelSettings_.RealTimeCompletion)
+				{
+					if (!typedChar.Equals(char.MinValue) || commandID == (uint)VSConstants.VSStd2KCmdID.RETURN)
+					{
+						_ = Task.Run(() => GetCompletionsAsync());
+						handled = true;
+					}
+					else if (commandID == (uint)VSConstants.VSStd2KCmdID.BACKSPACE || commandID == (uint)VSConstants.VSStd2KCmdID.DELETE)
+					{
+						_ = Task.Run(() => GetCompletionsAsync());
+						handled = true;
+					}
+				}
+				if (handled)
+				{
+					return VSConstants.S_OK;
+				}
 			}
 			return retVal;
 		}
@@ -133,40 +154,77 @@ namespace HandyTools.Completion
 			}
 		}
 
-		private void GetLSPCompletions()
+		private bool InProcessingCompletionTask()
+		{
+			return (null != completionTask_ && !completionTask_.IsCompleted);
+		}
+
+		private async Task GetCompletionsAsync()
 		{
 			SnapshotPoint? caretPoint = textView_.Caret.Position.Point.GetPoint(textBuffer => (!textBuffer.ContentType.IsOfType("projection")), PositionAffinity.Predecessor);
 			if (!caretPoint.HasValue)
 			{
 				return;
 			}
-			int lineN;
-			int characterN;
-			int res = vsTextView_.GetCaretPos(out lineN, out characterN);
+			int lineNumber;
+			int characterNumber;
+			_ = vsTextView_.GetCaretPos(out lineNumber, out characterNumber);
 
-			if (res != VSConstants.S_OK)
+			DocumentView documentView = await vsTextView_.ToDocumentViewAsync();
+			if (null == documentView)
 			{
 				return;
 			}
-			String untrimLine = textView_.TextBuffer.CurrentSnapshot.GetLineFromLineNumber(lineN).GetText();
-			if (characterN < untrimLine.Length)
-			{
-				String afterCaret = untrimLine.Substring(characterN);
-				String escapedSymbols = Regex.Escape(":(){ },.\"\';");
 
-				String pattern = "[\\s\\t\\n\\r" + escapedSymbols + "]*";
-				Match m = Regex.Match(afterCaret, pattern, RegexOptions.IgnoreCase);
-				if (!(m.Success && m.Index == 0 && m.Length == afterCaret.Length))
-					return;
-			}
-			hasCompletionUpdated_ = false;
-			bool multiline = !IsInline(lineN);
-			if (completionTask_ == null || completionTask_.IsCompleted)
+			HandyToolsPackage package;
+			if (!HandyToolsPackage.Package.TryGetTarget(out package))
 			{
-				string text = "test";
-				if (completionTask_ == null || completionTask_.IsCompleted)
+				return;
+			}
+			DateTime currentTime = DateTime.Now;
+			(string prefix, string suffix) = CodeUtil.GetCodeAround(documentView, (SnapshotPoint)caretPoint, AIModelSettings_.MaxCompletionInputSize);
+			if (string.IsNullOrWhiteSpace(prefix) && string.IsNullOrWhiteSpace(suffix))
+			{
+				return;
+			}
+
+			hasCompletionUpdated_ = false;
+			if (!InProcessingCompletionTask())
+			{
+				string prompt = CodeUtil.FormatFillInTheMiddle(AIModelSettings_.PromptCompletion, prefix, suffix);
+				{// Check completion interval
+					long differenceTime = currentTime <= lastCompletionTime_ ? 0 : (long)((currentTime-lastCompletionTime_).TotalMilliseconds);
+					if (differenceTime < AIModelSettings_.CompletionIntervalInMilliseconds)
+					{
+						return;
+					}
+				}
+				ModelOpenAI model = package.GetAIModel(AIModelSettings_, Types.TypeModel.Generation);
+				if (null == model)
 				{
-					_ = ShowCompletionAsync(text, lineN, characterN);
+					return;
+				}
+				completionTask_ = model.CompletionAsync(prompt, 0.0f, default, AIModelSettings_.MaxCompletionOutputSize);
+				string response = await completionTask_;
+				completionTask_ = null;
+				package.ReleaseAIModel(model);
+				response = CodeUtil.GetLine(response);
+				if (!string.IsNullOrWhiteSpace(response))
+				{
+					int newLineNumber;
+					int newCharacterNumber;
+					int resCaretPos = vsTextView_.GetCaretPos(out newLineNumber, out newCharacterNumber);
+					if (resCaretPos != VSConstants.S_OK || (lineNumber != newLineNumber) || (characterNumber != newCharacterNumber))
+					{
+						return;
+					}
+					CompletionTagger tagger = GetTagger();
+					if (null != tagger)
+					{
+						await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+						tagger.SetSuggestion(response, IsInline(newLineNumber), newCharacterNumber);
+						lastCompletionTime_ = DateTime.Now;
+					}
 				}
 			}
 		}
@@ -177,6 +235,7 @@ namespace HandyTools.Completion
 			return !String.IsNullOrWhiteSpace(text);
 		}
 
+#if false
 		private async Task ShowCompletionAsync(String text, int lineNumber, int characterNumber)
 		{
 			if (string.IsNullOrEmpty(text))
@@ -199,12 +258,13 @@ namespace HandyTools.Completion
 			}
 
 			CompletionTagger tagger = GetTagger();
-			if (null != tagger && !string.IsNullOrEmpty(text))
+			if (null != tagger)
 			{
 				await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-				//tagger.SetSuggestion(text, IsInline(newLineNumber), newCharacterNumber);
+				tagger.SetSuggestion(text, IsInline(newLineNumber), newCharacterNumber);
 			}
 		}
+#endif
 
 		void CheckSuggestionUpdate(uint nCmdID)
 		{
@@ -240,5 +300,8 @@ namespace HandyTools.Completion
 		private ICompletionSession session_;
 		private bool hasCompletionUpdated_;
 		private Task<string> completionTask_;
+		private DateTime lastCompletionTime_ = DateTime.MinValue;
+		private SettingFile.AIModelSettings AIModelSettings_;
+		private DateTime lastUpdateSettingsTime_ = DateTime.MinValue;
 	}
 }

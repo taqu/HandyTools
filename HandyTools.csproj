@@ -63,12 +63,8 @@
     <Compile Include="Completion\CompletionTagger.cs" />
     <Compile Include="Completion\CompletionTaggerProvider.cs" />
     <Compile Include="Completion\IntraGrayTextAdornmentTagger.cs" />
-    <Compile Include="Completion\SnippetUtil.cs" />
-    <Compile Include="Models\RefCount.cs" />
     <Compile Include="DefaultPrompts.cs" />
     <Compile Include="Log.cs" />
-    <Compile Include="Models\ModelBase.cs" />
-    <Compile Include="Models\ModelOllama.cs" />
     <Compile Include="Models\ModelOpenAI.cs" />
     <Compile Include="OllamaAPI\Generate.cs" />
     <Compile Include="OllamaAPI\Model.cs" />

@@ -21,7 +21,7 @@ namespace HandyTools.Commands
 			FormatResponse = settingFile.FormatResponse;
 		}
 
-		protected override async Task RunTaskAsync(IVsThreadedWaitDialog4 waitDialog, RefCount<ModelBase> model, DocumentView documentView, SnapshotSpan selection)
+		protected override async Task RunTaskAsync(IVsThreadedWaitDialog4 waitDialog, ModelOpenAI model, DocumentView documentView, SnapshotSpan selection)
 		{
 			using IDisposable disposable = waitDialog as IDisposable;
 			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -29,7 +29,7 @@ namespace HandyTools.Commands
 			(string definitionCode, string indent, int declStartLine) = await CodeUtil.GetDefinitionCodeAsync(documentView, selection);
 			if (string.IsNullOrEmpty(definitionCode))
 			{
-				model.Release();
+				HandyToolsPackage.Release(model);
 				waitDialog.EndWaitDialog();
 				await VS.MessageBox.ShowAsync("Handy Tools: Documentation needs definition codes.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
 				throw new Exception("Documentation needs definition codes.");
@@ -39,28 +39,30 @@ namespace HandyTools.Commands
 			prompt = PromptTemplate.Replace("{content}", definitionCode);
 
 			bool canceled = false;
-			waitDialog.UpdateProgress("In progress", "Handy Tools: 1/3 steps", "Handy Tools: 1/3 steps", 1, 3, true, out canceled);
+			waitDialog.UpdateProgress("In progress", "Handy Tools: 1/3 steps", "Handy Tools: 1/3 steps", 1, 3, false, out canceled);
 			if (canceled)
 			{
+				HandyToolsPackage.Release(model);
 				waitDialog.EndWaitDialog();
 				return;
 			}
 			string response = string.Empty;
 			try
 			{
-				response = await model.Get().CompletionAsync(prompt, Temperature);
+				response = await model.CompletionAsync(prompt, Temperature);
 				await Log.OutputAsync(response);
 				response = PostProcessResponse(response);
-				waitDialog.UpdateProgress("In progress", "Handy Tools: 2/3 steps", "Handy Tools: 2/3 steps", 2, 3, true, out canceled);
+				waitDialog.UpdateProgress("In progress", "Handy Tools: 2/3 steps", "Handy Tools: 2/3 steps", 2, 3, false, out canceled);
 				if (canceled)
 				{
+					HandyToolsPackage.Release(model);
 					waitDialog.EndWaitDialog();
 					return;
 				}
 			}
 			catch (Exception ex)
 			{
-				model.Release();
+				HandyToolsPackage.Release(model);
 				waitDialog.EndWaitDialog();
 				await VS.MessageBox.ShowAsync(ex.Message, buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
 				throw ex;
@@ -68,7 +70,7 @@ namespace HandyTools.Commands
 			response = CodeUtil.ExtractDoxygenComment(response, indent, LineFeed);
 			if (string.IsNullOrEmpty(response))
 			{
-				model.Release();
+				HandyToolsPackage.Release(model);
 				waitDialog.EndWaitDialog();
 				await VS.MessageBox.ShowAsync("Handy Tools: AI response is not appropriate.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
 				throw new Exception("AI response is not appropriate.");
@@ -102,7 +104,7 @@ namespace HandyTools.Commands
 				documentView.TextView.Selection.Select(snapshotSpan, false);
 				(await VS.GetServiceAsync<DTE, DTE>()).ExecuteCommand("Edit.FormatSelection");
 			}
-			model.Release();
+			HandyToolsPackage.Release(model);
 			waitDialog.UpdateProgress("In progress", "Handy Tools: 3/3 steps", "Handy Tools: 3/3 steps", 3, 3, true, out _);
 			waitDialog.EndWaitDialog();
 		}

@@ -12,21 +12,26 @@
 		</Code>
 	</UnifyLineFeed>
 	<UnifyEncoding>
-		<Encoding>UTF8</Encoding>
+		<Encoding>UTF8BOM</Encoding>
 	</UnifyEncoding>
 	<AI>
-		<!-- valid values: OpenAI or Ollama -->
-		<APIType>OpenAI</APIType>
-		<ModelGeneral>llama2</ModelGeneral>
-		<ModelGeneration>llama2</ModelGeneration>
-		<ModelTranslation>llama2</ModelTranslation>
+		<ModelGeneral>phi3</ModelGeneral>
+		<ModelGeneration>codegemma</ModelGeneration>
+		<ModelTranslation>phi3</ModelTranslation>
 		<ApiKey>XXX</ApiKey>
-		<ApiEndpoint>http://localhost:11434</ApiEndpoint>
-		<PromptCompletion>Code it by use cases. Write only the code, not the explanation.\n\n{content}</PromptCompletion>
-		<PromptExplanation>Explain the next {filetype} code.\n\n{content}</PromptExplanation>
+		<ApiEndpoint>http://localhost:9090</ApiEndpoint>
+		<CompletionEndpoint>http://localhost:9090</CompletionEndpoint>
+		<FormatResponse>False</FormatResponse>
+		<Temperature>0.1</Temperature>
+		<Timeout>30</Timeout>
+		<RealTimeCompletion>False</RealTimeCompletion>
+		<MaxTextLength>3000</MaxTextLength>
+		<CompletionIntervalInMilliseconds>1000</CompletionIntervalInMilliseconds>
+		<MaxCompletionInputSize>4000</MaxCompletionInputSize>
+		<MaxCompletionOutputSize>64</MaxCompletionOutputSize>
+		<PromptCompletion>&lt;|fim_prefix|&gt;{prefix}&lt;|fim_suffix|&gt;{suffix}&lt;|fim_middle|&gt;</PromptCompletion>
+		<PromptExplanation>Explain the next {filetype} code.\ncode:{content}</PromptExplanation>
 		<PromptTranslation>Translate in English\n\n{content}</PromptTranslation>
 		<PromptDocumentation>Create a doxygen comment for the following C++ Function. doxygen comment only\n\n{content}</PromptDocumentation>
-		<Temperature>0.1</Temperature>
-        <MaxTextLength>4096</MaxTextLength>
 	</AI>
 </HandyTools>

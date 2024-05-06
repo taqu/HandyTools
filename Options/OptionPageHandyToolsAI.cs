@@ -12,16 +12,7 @@ namespace HandyTools.Options
     [ComVisible(true)]
 	public class OptionPageHandyToolsAI : Microsoft.VisualStudio.Shell.DialogPage
     {
-        [Category("API")]
-        [DisplayName("API Type")]
-        [Description("API Type")]
-        public TypeAIAPI APIType
-        {
-            get { return typeAIAPI_; }
-            set { typeAIAPI_ = value; }
-        }
-
-				[Category("API")]
+		[Category("API")]
         [DisplayName("API Key")]
         [Description("API Key for OpenAI API")]
         public string ApiKey
@@ -39,7 +30,16 @@ namespace HandyTools.Options
             set { apiEndpoint_ = value; }
         }
 
-        [Category("Model")]
+		[Category("API")]
+		[DisplayName("Completion Endpoint")]
+		[Description("API Endpoint Completion Tasks")]
+		public string CompletionEndpoint
+		{
+			get { return completionEndpoint_; }
+			set { completionEndpoint_ = value; }
+		}
+
+		[Category("Model")]
         [DisplayName("Model Name")]
         [Description("Model Name for General Purpose")]
         public string ModelGeneral
@@ -102,10 +102,46 @@ namespace HandyTools.Options
 			set { timeout_ = value; }
 		}
 
+		[Category("Model")]
+		[DisplayName("RealTimeCompletion")]
+		[Description("Real time completion")]
+		public bool RealTimeCompletion 
+		{
+			get { return realTimeCompletion_; }
+			set { realTimeCompletion_ = value; }
+		}
+
+		[Category("Model")]
+		[DisplayName("Max Interval Time for Completion")]
+		[Description("Max Waiting Time for Completion")]
+		public int CompletionIntervalInMilliseconds
+		{
+			get { return completionIntervalInMilliseconds_; }
+			set { completionIntervalInMilliseconds_ = value; }
+		}
+
+		[Category("Model")]
+		[DisplayName("Max Input for Completion")]
+		[Description("Max Input Context Size for Completion")]
+		public int MaxCompletionInputSize
+		{
+			get { return maxCompletionInputSize_; }
+			set { maxCompletionInputSize_ = value; }
+		}
+
+		[Category("Model")]
+		[DisplayName("Max Output for Completion")]
+		[Description("Max Output Context Size for Completion")]
+		public int MaxCompletionOutputSize
+		{
+			get { return maxCompletionOutputSize_; }
+			set { maxCompletionOutputSize_ = value; }
+		}
+
 		[Category("Prompt")]
 		[DisplayName("Completion")]
 		[Description("Prompt for Completion")]
-		public string PromptCompletion 
+		public string PromptCompletion
 		{
 			get { return promptCompletion_; }
 			set { promptCompletion_ = value; }
@@ -138,18 +174,22 @@ namespace HandyTools.Options
 			set { promptDocumentation_ = value; }
 		}
 
-		private TypeAIAPI typeAIAPI_ = TypeAIAPI.OpenAI;
         private string modelGeneral_ = "llama2";
 		private string modelGeneration_ = "llama2";
 		private string modelTranslation_ = "llama2";
-		private string apiKey_ = string.Empty;
+		private string apiKey_ = "XXX";
         private string apiEndpoint_ = string.Empty;
-        private bool formatResponse_ = false;
+		private string completionEndpoint_ = string.Empty;
+		private bool formatResponse_ = false;
 		private float temperature_ = 0.1f;
         private int maxTextLength_ = 4096;
 		private int timeout_ = 30;
+		private bool realTimeCompletion_ = false;
+		private int completionIntervalInMilliseconds_ = 1000;
+		private int maxCompletionInputSize_ = 4096;
+		private int maxCompletionOutputSize_ = 64;
 		private string promptCompletion_ = DefaultPrompts.PromptCompletion;
-        private string promptExplanation_ = DefaultPrompts.PromptExplanation;
+		private string promptExplanation_ = DefaultPrompts.PromptExplanation;
 		private string promptTranslation_ = DefaultPrompts.PromptTranslation;
 		private string promptDocumentation_ = DefaultPrompts.PromptDocumentation;
 	}

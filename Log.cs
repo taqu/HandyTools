@@ -13,16 +13,21 @@ namespace HandyTools
         [System.Diagnostics.Conditional("DEBUG")]
         public static void Output(string message)
         {
-            Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
-            DTE2 dte2 = Microsoft.VisualStudio.Shell.Package.GetGlobalService(typeof(DTE)) as DTE2;
-            EnvDTE.OutputWindow outputWindow = dte2.ToolWindows.OutputWindow;
-            if(null == outputWindow) {
-                return;
-            }
-            foreach(EnvDTE.OutputWindowPane window in outputWindow.OutputWindowPanes) {
-                window.OutputString(message);
-            }
-            Trace.Write(message);
+			ThreadHelper.JoinableTaskFactory.Run(async () =>
+			{
+				await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+				DTE2 dte2 = Microsoft.VisualStudio.Shell.Package.GetGlobalService(typeof(DTE)) as DTE2;
+				EnvDTE.OutputWindow outputWindow = dte2.ToolWindows.OutputWindow;
+				if (null == outputWindow)
+				{
+					return;
+				}
+				foreach (EnvDTE.OutputWindowPane window in outputWindow.OutputWindowPanes)
+				{
+					window.OutputString(message);
+				}
+				Trace.Write(message);
+			});
         }
 
 		/// <summary>

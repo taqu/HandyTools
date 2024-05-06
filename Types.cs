@@ -28,12 +28,6 @@ namespace HandyTools
             UTF8BOM,
         };
 
-        public enum TypeAIAPI
-        {
-            OpenAI = 0,
-            Ollama,
-        }
-
         public enum TypeResponse
         {
             Append = 0,

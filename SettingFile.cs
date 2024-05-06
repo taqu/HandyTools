@@ -48,16 +48,20 @@ namespace HandyTools
 				lineFeeds_ = settings.lineFeeds_;
 				encoding_ = settings.encoding_;
 
-				typeAIAPI_ = settings.typeAIAPI_;
 				modelGeneral_ = settings.modelGeneral_;
 				modelGeneration_ = settings.modelGeneration_;
 				modelTranslation_ = settings.modelTranslation_;
 				apiKey_ = settings.apiKey_;
 				apiEndpoint_ = settings.apiEndpoint_;
+				completionEndpoint_ = settings.completionEndpoint_;
 				formatResponse_ = settings.formatResponse_;
 				temperature_ = settings.temperature_;
 				maxTextLength_ = settings.maxTextLength_;
 				timeout_ = settings.timeout_;
+				realTimeCompletion_ = settings.realTimeCompletion_;
+				maxCompletionInputSize_ = settings.maxCompletionInputSize_;
+				completionIntervalInMilliseconds_ = settings.completionIntervalInMilliseconds_;
+				maxCompletionOutputSize_ = settings.maxCompletionOutputSize_;
 				promptCompletion_ = settings.promptCompletion_;
 				promptExplanation_ = settings.promptExplanation_;
 				promptTranslation_ = settings.promptTranslation_;
@@ -71,9 +75,19 @@ namespace HandyTools
 
 			public Types.TypeEncoding Encoding { get => encoding_; }
 
-			public TypeAIAPI APIType
+			public string GetAPIEndpoint(Types.TypeModel type)
 			{
-				get { return typeAIAPI_; }
+				switch (type)
+				{
+					case TypeModel.General:
+						return apiEndpoint_;
+					case TypeModel.Generation:
+						return completionEndpoint_;
+					case TypeModel.Translation:
+						return apiEndpoint_;
+					default:
+						return apiEndpoint_;
+				}
 			}
 
 			public string GetModelName(Types.TypeModel type)
@@ -116,6 +130,11 @@ namespace HandyTools
 				get { return apiEndpoint_; }
 			}
 
+			public string CompletionEndpoint
+			{
+				get { return completionEndpoint_; }
+			}
+
 			public bool FormatResponse
 			{
 				get { return formatResponse_; }
@@ -134,6 +153,26 @@ namespace HandyTools
 			public int Timeout
 			{
 				get { return timeout_; }
+			}
+
+			public bool RealTimeCompletion
+			{
+				get { return realTimeCompletion_; }
+			}
+
+			public int MaxCompletionInputSize
+			{
+				get { return maxCompletionInputSize_; }
+			}
+
+			public long CompletionIntervalInMilliseconds
+			{
+				get { return completionIntervalInMilliseconds_; }
+			}
+
+			public int MaxCompletionOutputSize
+			{
+				get { return maxCompletionOutputSize_; }
 			}
 
 			public string PromptCompletion
@@ -159,16 +198,20 @@ namespace HandyTools
 			private Types.TypeLineFeed[] lineFeeds_;
 			private Types.TypeEncoding encoding_;
 
-			private TypeAIAPI typeAIAPI_;
 			private string modelGeneral_ = "llama2";
 			private string modelGeneration_ = "llama2";
 			private string modelTranslation_ = "llama2";
-			private string apiKey_ = string.Empty;
+			private string apiKey_ = "XXX";
 			private string apiEndpoint_ = string.Empty;
+			private string completionEndpoint_ = string.Empty;
 			private bool formatResponse_ = false;
 			private float temperature_ = 0.1f;
 			private int maxTextLength_ = 4096;
 			private int timeout_ = 30;
+			private bool realTimeCompletion_ = false;
+			private int maxCompletionInputSize_ = 4096;
+			private long completionIntervalInMilliseconds_ = 1000;
+			private int maxCompletionOutputSize_ = 64;
 			private string promptCompletion_ = DefaultPrompts.PromptCompletion;
 			private string promptExplanation_ = DefaultPrompts.PromptExplanation;
 			private string promptTranslation_ = DefaultPrompts.PromptTranslation;
@@ -198,12 +241,6 @@ namespace HandyTools
 		}
 
 		public Types.TypeEncoding Encoding { get => encoding_; }
-
-		public TypeAIAPI APIType
-		{
-			get { return typeAIAPI_; }
-			set { typeAIAPI_ = value; }
-		}
 
 		public string ModelGeneral
 		{
@@ -235,6 +272,12 @@ namespace HandyTools
 			set { apiEndpoint_ = value; }
 		}
 
+		public string CompletionEndpoint
+		{
+			get { return completionEndpoint_; }
+			set { completionEndpoint_ = value; }
+		}
+
 		public bool FormatResponse
 		{
 			get { return formatResponse_; }
@@ -257,6 +300,30 @@ namespace HandyTools
 		{
 			get { return timeout_; }
 			set { timeout_ = value; }
+		}
+
+		public bool RealTimeCompletion
+		{
+			get { return realTimeCompletion_; }
+			set { realTimeCompletion_ = value; }
+		}
+
+		public long CompletionIntervalInMilliseconds
+		{
+			get { return completionIntervalInMilliseconds_; }
+			set { completionIntervalInMilliseconds_ = value; }
+		}
+
+		public int MaxCompletionInputSize
+		{
+			get { return maxCompletionInputSize_; }
+			set { maxCompletionInputSize_ = value;}
+		}
+
+		public int MaxCompletionOutputSize
+		{
+			get { return maxCompletionOutputSize_; }
+			set { maxCompletionOutputSize_ = value; }
 		}
 
 		public string PromptCompletion
@@ -298,16 +365,20 @@ namespace HandyTools
 			}
 		}
 
-		private TypeAIAPI typeAIAPI_;
 		private string modelGeneral_ = "llama2";
 		private string modelGeneration_ = "llama2";
 		private string modelTranslation_ = "llama2";
-		private string apiKey_ = string.Empty;
+		private string apiKey_ = "XXX";
 		private string apiEndpoint_ = string.Empty;
+		private string completionEndpoint_ = string.Empty;
 		private bool formatResponse_ = false;
 		private float temperature_ = 0.1f;
 		private int maxTextLength_ = 4096;
 		private int timeout_ = 30;
+		private bool realTimeCompletion_;
+		private long completionIntervalInMilliseconds_ = 1000;
+		private int maxCompletionInputSize_ = 4096;
+		private int maxCompletionOutputSize_ = 64;
 		private string promptCompletion_ = DefaultPrompts.PromptCompletion;
 		private string promptExplanation_ = DefaultPrompts.PromptExplanation;
 		private string promptTranslation_ = DefaultPrompts.PromptTranslation;
@@ -356,7 +427,6 @@ namespace HandyTools
 		/// <returns></returns>
 		public static SettingFile Load(WeakReference<HandyToolsPackage> package, string documentPath)
 		{
-			ThreadHelper.ThrowIfNotOnUIThread();
 			string directoryPath = System.IO.Path.GetDirectoryName(documentPath);
 			SettingFile settingFile = SetFromSetting(package);
 			if (!settingFile.LoadSettingFile || string.IsNullOrEmpty(directoryPath) || !System.IO.Directory.Exists(directoryPath))
@@ -490,22 +560,6 @@ namespace HandyTools
 					{
 						switch (child.Name)
 						{
-							case "APIType":
-								{
-									string type = child.InnerText.Trim();
-									switch (type)
-									{
-										case "OpenAI":
-											settingFile.APIType = TypeAIAPI.OpenAI;
-											break;
-										case "Ollama":
-											settingFile.APIType = TypeAIAPI.Ollama;
-											break;
-										default:
-											continue;
-									}
-								}
-								break;
 							case "ModelGeneral":
 								settingFile.ModelGeneral = child.InnerText.Trim();
 								break;
@@ -520,6 +574,9 @@ namespace HandyTools
 								break;
 							case "ApiEndpoint":
 								settingFile.ApiEndpoint = child.InnerText.Trim();
+								break;
+							case "CompletionEndpoint":
+								settingFile.CompletionEndpoint = child.InnerText.Trim();
 								break;
 							case "FormatResponse":
 								{
@@ -537,16 +594,50 @@ namespace HandyTools
 								break;
 							case "MaxTextLength":
 								{
-									int maxTextLength = 0;
+									int maxTextLength = 2000;
 									int.TryParse(child.InnerText.Trim().ToLower(), out maxTextLength);
 									settingFile.MaxTextLength = maxTextLength;
 								}
 								break;
 							case "Timeout":
 								{
-									int timeout = 0;
+									int timeout = 30;
 									int.TryParse(child.InnerText.Trim().ToLower(), out timeout);
 									settingFile.Timeout = timeout;
+								}
+								break;
+							case "RealTimeCompletion":
+								{
+									bool realTimeCompletion = false;
+									bool.TryParse(child.InnerText.Trim().ToLower(), out realTimeCompletion);
+									settingFile.RealTimeCompletion = realTimeCompletion;
+								}
+								break;
+							case "CompletionIntervalInMilliseconds":
+								{
+									long completionIntervalInMilliseconds = 1000;
+									long.TryParse(child.InnerText.Trim().ToLower(), out completionIntervalInMilliseconds);
+									settingFile.CompletionIntervalInMilliseconds = completionIntervalInMilliseconds;
+								}
+								break;
+							case "MaxCompletionInputSize":
+								{
+									int maxCompletionInputSize = 4000;
+									int.TryParse(child.InnerText.Trim().ToLower(), out maxCompletionInputSize);
+									if (0 < maxCompletionInputSize)
+									{
+										settingFile.MaxCompletionInputSize = maxCompletionInputSize;
+									}
+								}
+								break;
+							case "MaxCompletionOutputSize":
+								{
+									int maxCompletionOutputSize = 64;
+									int.TryParse(child.InnerText.Trim().ToLower(), out maxCompletionOutputSize);
+									if (0 < maxCompletionOutputSize)
+									{
+										settingFile.MaxCompletionOutputSize = maxCompletionOutputSize;
+									}
 								}
 								break;
 							case "PromptCompletion":
@@ -667,19 +758,24 @@ namespace HandyTools
 			Options.OptionPageHandyToolsAI optionPageAI = package.AIOptions;
 			if (null != optionPageAI)
 			{
-				settingFile.APIType = optionPageAI.APIType;
 				settingFile.ModelGeneral = optionPageAI.ModelGeneral;
 				settingFile.ModelGeneration = optionPageAI.ModelGeneration;
 				settingFile.ModelTranslation = optionPageAI.ModelTranslation;
 				settingFile.ApiKey = optionPageAI.ApiKey;
 				settingFile.ApiEndpoint = optionPageAI.ApiEndpoint;
+				settingFile.CompletionEndpoint = optionPageAI.CompletionEndpoint;
 				settingFile.FormatResponse = optionPageAI.FormatResponse;
 				settingFile.Temperature = optionPageAI.Temperature;
 				settingFile.MaxTextLength = optionPageAI.MaxTextLength;
 				settingFile.Timeout = optionPageAI.Timeout;
+				settingFile.RealTimeCompletion = optionPageAI.RealTimeCompletion;
+				settingFile.CompletionIntervalInMilliseconds = optionPageAI.CompletionIntervalInMilliseconds;
+				settingFile.MaxCompletionInputSize = optionPageAI.MaxCompletionInputSize;
+				settingFile.MaxCompletionOutputSize = optionPageAI.MaxCompletionOutputSize;
 				settingFile.PromptCompletion = optionPageAI.PromptCompletion;
 				settingFile.PromptExplanation = optionPageAI.PromptExplanation;
 				settingFile.PromptTranslation = optionPageAI.PromptTranslation;
+				settingFile.PromptDocumentation = optionPageAI.PromptDocumentation;
 			}
 			return settingFile;
 		}

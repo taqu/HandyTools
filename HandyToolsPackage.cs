@@ -5,33 +5,35 @@ global using Task = System.Threading.Tasks.Task;
 using HandyTools.Models;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TextManager.Interop;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Documents;
 using static HandyTools.SettingFile;
 using static HandyTools.Types;
 
 namespace HandyTools
 {
-    /// <summary>
-    /// This is the class that implements the package exposed by this assembly.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// The minimum requirement for a class to be considered a valid package for Visual Studio
-    /// is to implement the IVsPackage interface and register itself with the shell.
-    /// This package uses the helper classes defined inside the Managed Package Framework (MPF)
-    /// to do it: it derives from the Package class that provides the implementation of the
-    /// IVsPackage interface and uses the registration attributes defined in the framework to
-    /// register itself and its components with the shell. These attributes tell the pkgdef creation
-    /// utility what data to put into .pkgdef file.
-    /// </para>
-    /// <para>
-    /// To get loaded into VS, the package must be referred by &lt;Asset Type="Microsoft.VisualStudio.VsPackage" ...&gt; in .vsixmanifest file.
-    /// </para>
-    /// </remarks>
-    [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
+	/// <summary>
+	/// This is the class that implements the package exposed by this assembly.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// The minimum requirement for a class to be considered a valid package for Visual Studio
+	/// is to implement the IVsPackage interface and register itself with the shell.
+	/// This package uses the helper classes defined inside the Managed Package Framework (MPF)
+	/// to do it: it derives from the Package class that provides the implementation of the
+	/// IVsPackage interface and uses the registration attributes defined in the framework to
+	/// register itself and its components with the shell. These attributes tell the pkgdef creation
+	/// utility what data to put into .pkgdef file.
+	/// </para>
+	/// <para>
+	/// To get loaded into VS, the package must be referred by &lt;Asset Type="Microsoft.VisualStudio.VsPackage" ...&gt; in .vsixmanifest file.
+	/// </para>
+	/// </remarks>
+	[PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
 	[InstalledProductRegistration(Vsix.Name, Vsix.Description, Vsix.Version)]
 	[Guid(HandyToolsPackage.PackageGuidString)]
 	[ProvideAutoLoad(UIContextGuids.SolutionExists, PackageAutoLoadFlags.BackgroundLoad)]
@@ -46,6 +48,7 @@ namespace HandyTools
 		/// HandyToolsPackage GUID string.
 		/// </summary>
 		public const string PackageGuidString = PackageGuids.HandyToolsString;
+		public const int MaxPoolSize = 4;
 
 		#region Package Members
 
@@ -58,7 +61,7 @@ namespace HandyTools
 				return package;
 			}
 			IVsShell shell = GetGlobalService(typeof(SVsShell)) as IVsShell;
-			if(null == shell)
+			if (null == shell)
 			{
 				return null;
 			}
@@ -91,7 +94,6 @@ namespace HandyTools
 
 		public TextSettings GetTextSettings(string documentPath)
 		{
-			Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
 			lock (lockObject_)
 			{
 				SettingFile settingFile = SettingFile.Load(package_, documentPath);
@@ -99,62 +101,78 @@ namespace HandyTools
 			}
 		}
 
-		public (RefCount<ModelBase>, SettingFile.AIModelSettings) GetAIModel(TypeModel type, string documentPath)
+		public SettingFile.AIModelSettings GetAISettings(string documentPath)
 		{
-			Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+			lock (lockObject_)
+			{
+				SettingFile settingFile = SettingFile.Load(package_, documentPath);
+				return new AIModelSettings(settingFile);
+			}
+		}
+
+		public ModelOpenAI GetAIModel(SettingFile.AIModelSettings aiModelSettings, TypeModel type)
+		{
+			lock (lockObject_)
+			{
+				ModelOpenAI aiModel;
+				if (aiModels_.Count <= 0)
+				{
+					aiModel = new ModelOpenAI(aiModelSettings, type);
+				}
+				else
+				{
+					aiModel = aiModels_[aiModels_.Count - 1];
+					aiModels_.RemoveAt(aiModels_.Count - 1);
+					aiModel.Model = aiModelSettings.GetModelName(type);
+					aiModel.APIEndpoint = aiModelSettings.GetAPIEndpoint(type);
+				}
+				return aiModel;
+			}
+		}
+
+		public (ModelOpenAI, SettingFile.AIModelSettings) GetAIModel(TypeModel type, string documentPath)
+		{
 			AIModelSettings aiModelSettings;
 			lock (lockObject_)
 			{
 				SettingFile settingFile = SettingFile.Load(package_, documentPath);
 				aiModelSettings = new AIModelSettings(settingFile);
+				ModelOpenAI aiModel;
+				if (aiModels_.Count <= 0)
+				{
+					aiModel = new ModelOpenAI(aiModelSettings, type);
+				}
+				else
+				{
+					aiModel = aiModels_[aiModels_.Count - 1];
+					aiModels_.RemoveAt(aiModels_.Count - 1);
+					aiModel.Model = aiModelSettings.GetModelName(type);
+					aiModel.APIEndpoint = aiModelSettings.GetAPIEndpoint(type);
+				}
+				return (aiModel, aiModelSettings);
 			}
-            if (null != aiModel_)
-            {
-                switch (aiModel_.Get().APIType)
-                {
-                case Types.TypeAIAPI.OpenAI:
-                    if (aiModelSettings.APIType == Types.TypeAIAPI.OpenAI)
-                    {
-					if (aiModel_.Count <= 0)
-					{
-							(aiModel_.Get() as ModelOpenAI).Model = aiModelSettings.GetModelName(type);
-					}
-						aiModel_.AddRef();
-                        return (aiModel_, aiModelSettings);
-                    }
-                    break;
-                case Types.TypeAIAPI.Ollama:
-                    if (aiModelSettings.APIType == Types.TypeAIAPI.Ollama)
-                    {
-						if (aiModel_.Count <= 0)
-					{
-							(aiModel_.Get() as ModelOllama).Model = aiModelSettings.GetModelName(type);
-					}
-						aiModel_.AddRef();
-                        return (aiModel_, aiModelSettings);
-                    }
-                    break;
-                default:
-                    return (null, aiModelSettings);
-                }
-            }
-			switch (aiModelSettings.APIType)
+		}
+
+		public void ReleaseAIModel(ModelOpenAI aiModel)
+		{
+			lock (lockObject_)
 			{
-				case Types.TypeAIAPI.OpenAI:
-					if (string.IsNullOrEmpty(aiModelSettings.ApiKey))
-					{
-						return (null, aiModelSettings);
-					}
-					aiModel_ = new RefCount<ModelBase>(new ModelOpenAI(aiModelSettings, type));
-					break;
-				case Types.TypeAIAPI.Ollama:
-					aiModel_ = new RefCount<ModelBase>(new ModelOllama(aiModelSettings, type));
-					break;
-				default:
-					return (null, aiModelSettings);
+				if(MaxPoolSize<=aiModels_.Count)
+				{
+					aiModels_.RemoveAt(0);
+				}
+				aiModels_.Add(aiModel);
 			}
-			aiModel_.AddRef();
-			return (aiModel_, aiModelSettings);
+		}
+
+		public static void Release(ModelOpenAI aiModel)
+		{
+			HandyToolsPackage package;
+			if (!HandyToolsPackage.Package.TryGetTarget(out package))
+			{
+				return;
+			}
+			package.ReleaseAIModel(aiModel);
 		}
 
 		public async Task<SVsServiceProvider> GetServiceProviderAsync()
@@ -173,10 +191,10 @@ namespace HandyTools
 		private RunningDocTableEvents runningDocTableEvents_;
 		private EnvDTE.SolutionEvents solutionEvents_;
 		private EnvDTE.ProjectItemsEvents projectItemsEvents_;
-		private RefCount<ModelBase> aiModel_;
+		private List<ModelOpenAI> aiModels_ = new List<ModelOpenAI>();
 		private object lockObject_ = new object();
 
- 		/// <summary>
+		/// <summary>
 		/// Initialization of the package; this method is called right after the package is sited, so this is the place
 		/// where you can put all the initialization code that rely on services provided by VisualStudio.
 		/// </summary>
