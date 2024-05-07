@@ -97,7 +97,7 @@ An example general setting file "_handytools.xml" is below,
 </HandyTools>
 ```
 
-#### General Settings
+#### AI Settings
 An example settings for OpenAI API endpoint,
 
 ```xml
@@ -123,9 +123,9 @@ An example settings for OpenAI API endpoint,
 		<PromptTranslation>Translate in English\n\n{content}</PromptTranslation>
 		<PromptDocumentation>Create a doxygen comment for the following C++ Function. doxygen comment only\n\n{content}</PromptDocumentation>
 	</AI>
-
 </HandyTools>
 ```
+
 # ToDo
 
 # License
