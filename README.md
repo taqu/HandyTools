@@ -131,3 +131,28 @@ An example settings for OpenAI API endpoint,
 # License
 This software is distributed under two licenses 'The MIT License' or 'Public Domain', choose whichever you like.
 
+# Release
+- v.0.5.5
+  - Delete Ollama API support
+  - Add AI one line completion
+- v.0.5.4
+  - Fix failing to detect function's declarations
+- v.0.5.3
+  - Remove supports of Unreal
+- v.0.5.2
+  - Add template and Unreal's FUNCTION macro
+- v.0.5.1
+  - Fix some bugs about async
+  - Apply short cut keybindings
+- v.0.5.0
+  - Remove full-text search, because Visual Studio itself has integrated full-text search
+  - Add AI commands
+- v.0.4.0
+  - Add a search window menu
+- v.0.3.0
+  - Fix failures on loading settings
+- v.0.2.0
+  - Add full-text search
+- v.0.1.0
+  - Initial release
+
