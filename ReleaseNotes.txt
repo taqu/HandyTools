@@ -1,5 +1,6 @@
 - v.0.5.5
   - Delete Ollama API support
+  - Add AI one line completion
 - v.0.5.4
   - Fix failing to detect function's declarations
 - v.0.5.3

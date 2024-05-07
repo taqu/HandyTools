@@ -469,12 +469,12 @@ namespace HandyTools.Completion
 			string untrimLine = snapshot_.GetLineFromLineNumber(currentTextLineNumber_).GetText();
 			string line = untrimLine.Trim();
 
-			int suggestionLineN = CheckSuggestion(suggestion.Item1, line);
-			if (0<=suggestionLineN)
+			int suggestionLineNumber = CheckSuggestion(suggestion.Item1, line);
+			if (0<=suggestionLineNumber)
 			{
 				int diff = untrimLine.Length - untrimLine.TrimStart().Length;
 				string whitespace = string.IsNullOrWhiteSpace(untrimLine) ? string.Empty : untrimLine.Substring(0, diff);
-#if true
+#if false
 				(string prefix, string suffix) = Commands.CodeUtil.GetNextCompletion(suggestion.Item1);
 				if (string.IsNullOrEmpty(prefix))
 				{

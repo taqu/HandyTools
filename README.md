@@ -15,14 +15,15 @@ Some tools for code editing.
 Just right click on the target code, and select command from Handy Tools submenu.
 ![](./doc/AIMenu.jpg)
 
-| Command          | Place                 | Description                                                        |
-| :------          | :----                 | :----------                                                        |
-| Complete         | Selection or one line | Fill in the middle at the cursor position.                         |
-| Explain Function | Selection or one line | Explain a funciton which the selection or one line is overlapping. |
-| Translate        | Selection             | Translate the selected text on the chat view.                      |
-| Add Doxygen      | Selection or one line | Add Doxygen style document for a function,                         |
-|                  |                       | which the selection or one line is overlapping.                    |
-| Preview Doxygen  | Selection of one line | Preview Doxygen style document for a function on the chat view.    |
+| Command                 | Place                 | Description                                                        |
+| :------                 | :----                 | :----------                                                        |
+| Complete                | Cursor Position       | Fill in the middle at the cursor position.                         |
+| Explain Function        | Selection or one line | Explain a funciton which the selection or one line is overlapping. |
+| Translate               | Selection             | Translate the selected text on the chat view.                      |
+| Add Doxygen             | Selection or one line | Add Doxygen style document for a function,                         |
+|                         |                       | which the selection or one line is overlapping.                    |
+| Preview Doxygen         | Selection of one line | Preview Doxygen style document for a function on the chat view.    |
+| Add One Line Completion | Cursor Position       | Fill in the middle at the cursor position only one line            |
 
 ![](./doc/HandyTools00.gif)
 
@@ -51,13 +52,19 @@ Just right click on the target code, and select command from Handy Tools submenu
 | :---   | :---                    | :----------                                                     | :------ |
 | API    | API Endpoint            | Endpoint Address                                                | empty   |
 |        | API Key                 | API Key                                                         | XXX     |
-| Model  | Format After Generation | Whether format text after generation                            | false   |
-|        | Completion Model Name   | Model for completion tasks                                      | llama2  |
+|        | Completion Endpoint     | Endpoint Address for completion                                 | empty   |
+| Model  | Model for General       | Model for general tasks                                         | llama2  |
+|        | Model for Generation    | Model for generation or code FIM tasks                          | llama2  |
+|        | Model for Translation   | Model for translation                                           | llama2  |
+|        | Format After Generation | Whether format text after generation                            | false   |
 |        | Max Text Length         | Max text length for passing to LLM (in chars, not context size) | llama2  |
-|        | Model Name              | Model for general tasks                                         | llama2  |
 |        | Temperature             | Temperature in generation parameters                            | 0.1     |
-|        | Translation Model Name  | Model for translation tasks                                     | llama2  |
-| Prompt | Documentation           | Prompt for documentation tasks                                  |         |
+|        | RealTime Completion     | Automatic suggest completions on every key strokes              | False   |
+|        | Completion Interval     | Interval time in milliseconds for suggestion                    | 1000    |
+|        | MaxCompletionInputSize  | Max text length around cursor point for completion              | 4000    |
+|        | MaxCompletionOutputSize | Max output text length for line completion                      | 64      |
+| Prompt | Completion              | Prompt for completion tasks                                     |         |
+|        | Documentation           | Prompt for documentation tasks                                  |         |
 |        | Explanation             | Prompt for explanation tasks                                    |         |
 |        | Translation             | Prompt for translation tasks                                    |         |
 
@@ -97,12 +104,26 @@ An example settings for OpenAI API endpoint,
 <?xml version="1.0" encoding="utf-8"?>
 <HandyTools>
 	<AI>
-		<ModelGeneral>gpt3.5-turbo</ModelGeneral>
-		<ModelGeneration>gpt3.5-turbo</ModelGeneration>
-		<ModelTranslation>gpt3.5-turbo</ModelTranslation>
+		<ModelGeneral>llama2</ModelGeneral>
+		<ModelGeneration>llama2</ModelGeneration>
+		<ModelTranslation>llama2</ModelTranslation>
 		<ApiKey>XXX</ApiKey>
-		<ApiEndpoint></ApiEndpoint>
+		<ApiEndpoint>http://localhost:9090</ApiEndpoint>
+		<CompletionEndpoint>http://localhost:9090</CompletionEndpoint>
+		<FormatResponse>False</FormatResponse>
+		<Temperature>0.1</Temperature>
+		<Timeout>30</Timeout>
+		<RealTimeCompletion>False</RealTimeCompletion>
+		<MaxTextLength>3000</MaxTextLength>
+		<CompletionIntervalInMilliseconds>1000</CompletionIntervalInMilliseconds>
+		<MaxCompletionInputSize>4000</MaxCompletionInputSize>
+		<MaxCompletionOutputSize>64</MaxCompletionOutputSize>
+		<PromptCompletion>&lt;|fim_prefix|&gt;{prefix}&lt;|fim_suffix|&gt;{suffix}&lt;|fim_middle|&gt;</PromptCompletion>
+		<PromptExplanation>Explain the next {filetype} code.\ncode:{content}</PromptExplanation>
+		<PromptTranslation>Translate in English\n\n{content}</PromptTranslation>
+		<PromptDocumentation>Create a doxygen comment for the following C++ Function. doxygen comment only\n\n{content}</PromptDocumentation>
 	</AI>
+
 </HandyTools>
 ```
 # ToDo
