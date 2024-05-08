@@ -104,15 +104,17 @@ namespace HandyTools.Completion
 					{
 						return retVal;
 					}
-					HandyToolsPackage package;
-					if (null != documentView && HandyToolsPackage.Package.TryGetTarget(out package))
-					{
-						lastUpdateSettingsTime_ = DateTime.Now;
-						AIModelSettings_ = package.GetAISettings(documentView.FilePath);
-					}
-				}
+                    HandyToolsPackage package;
+                    if (!HandyToolsPackage.TryGetPackage(out package))
+                    {
+                        return retVal;
+                    }
 
-				bool handled = false;
+                    lastUpdateSettingsTime_ = DateTime.Now;
+                    AIModelSettings_ = package.GetAISettings(documentView.FilePath);
+                }
+
+                bool handled = false;
 				//gets completions on added character or deletions
 				if (pguidCmdGroup == PackageGuids.HandyTools && commandID == (uint)PackageIds.CommandLineCompletion)
 				{
@@ -176,8 +178,8 @@ namespace HandyTools.Completion
 				return;
 			}
 
-			HandyToolsPackage package;
-			if (!HandyToolsPackage.Package.TryGetTarget(out package))
+			HandyToolsPackage package = await HandyToolsPackage.GetPackageAsync();
+			if (null == package)
 			{
 				return;
 			}
@@ -295,9 +297,8 @@ namespace HandyTools.Completion
 		private IOleCommandTarget nextCommandHandler_;
 		private IVsTextView vsTextView_;
 		private ITextView textView_;
-		private ITextDocument textDocument_;
 		private AICompletionCommandHandlerProvider provider_;
-		private ICompletionSession session_;
+		//private ICompletionSession session_;
 		private bool hasCompletionUpdated_;
 		private Task<string> completionTask_;
 		private DateTime lastCompletionTime_ = DateTime.MinValue;

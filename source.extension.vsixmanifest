@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
     <Metadata>
-        <Identity Id="HandyTools.d11999cd-7bb6-4de2-acfc-9992c548ed34" Version="0.5.5" Language="en-US" Publisher="taqu29" />
+        <Identity Id="HandyTools.d11999cd-7bb6-4de2-acfc-9992c548ed34" Version="0.5.6" Language="en-US" Publisher="taqu29" />
         <DisplayName>HandyTools</DisplayName>
         <Description xml:space="preserve">Some tools for editing codes</Description>
         <MoreInfo>https://github.com/taqu/HandyTools</MoreInfo>

@@ -6,36 +6,35 @@ using HandyTools.Models;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TextManager.Interop;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Documents;
 using static HandyTools.SettingFile;
 using static HandyTools.Types;
 
 namespace HandyTools
 {
-	/// <summary>
-	/// This is the class that implements the package exposed by this assembly.
-	/// </summary>
-	/// <remarks>
-	/// <para>
-	/// The minimum requirement for a class to be considered a valid package for Visual Studio
-	/// is to implement the IVsPackage interface and register itself with the shell.
-	/// This package uses the helper classes defined inside the Managed Package Framework (MPF)
-	/// to do it: it derives from the Package class that provides the implementation of the
-	/// IVsPackage interface and uses the registration attributes defined in the framework to
-	/// register itself and its components with the shell. These attributes tell the pkgdef creation
-	/// utility what data to put into .pkgdef file.
-	/// </para>
-	/// <para>
-	/// To get loaded into VS, the package must be referred by &lt;Asset Type="Microsoft.VisualStudio.VsPackage" ...&gt; in .vsixmanifest file.
-	/// </para>
-	/// </remarks>
-	[PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
+    /// <summary>
+    /// This is the class that implements the package exposed by this assembly.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The minimum requirement for a class to be considered a valid package for Visual Studio
+    /// is to implement the IVsPackage interface and register itself with the shell.
+    /// This package uses the helper classes defined inside the Managed Package Framework (MPF)
+    /// to do it: it derives from the Package class that provides the implementation of the
+    /// IVsPackage interface and uses the registration attributes defined in the framework to
+    /// register itself and its components with the shell. These attributes tell the pkgdef creation
+    /// utility what data to put into .pkgdef file.
+    /// </para>
+    /// <para>
+    /// To get loaded into VS, the package must be referred by &lt;Asset Type="Microsoft.VisualStudio.VsPackage" ...&gt; in .vsixmanifest file.
+    /// </para>
+    /// </remarks>
+    [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
 	[InstalledProductRegistration(Vsix.Name, Vsix.Description, Vsix.Version)]
 	[Guid(HandyToolsPackage.PackageGuidString)]
+	//[ProvideAutoLoad(UIContextGuids.NoSolution, PackageAutoLoadFlags.BackgroundLoad)]
 	[ProvideAutoLoad(UIContextGuids.SolutionExists, PackageAutoLoadFlags.BackgroundLoad)]
 	[ProvideAutoLoad(UIContextGuids.CodeWindow, PackageAutoLoadFlags.BackgroundLoad)]
 	[ProvideMenuResource("Menus.ctmenu", 1)]
@@ -71,9 +70,53 @@ namespace HandyTools
 			return vsPackage as HandyToolsPackage;
 		}
 
-		public static WeakReference<HandyToolsPackage> Package { get => package_; }
+        public static bool TryGetPackage(out HandyToolsPackage package)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (null != package_ && package_.TryGetTarget(out package))
+            {
+                return true;
+            }
+			package = null;
+            IVsShell shell = GetGlobalService(typeof(SVsShell)) as IVsShell;
+            if (null == shell)
+            {
+                return false;
+            }
+            IVsPackage vsPackage = null;
+            Guid PackageToBeLoadedGuid = new Guid(HandyToolsPackage.PackageGuidString);
+            shell.LoadPackage(ref PackageToBeLoadedGuid, out vsPackage);
+            package = vsPackage as HandyToolsPackage;
+			return null != package;
+        }
 
-		public EnvDTE80.DTE2 DTE { get { return dte2_; } }
+        public static async Task<HandyToolsPackage> GetPackageAsync()
+        {
+			HandyToolsPackage package;
+            if (null != package_ && package_.TryGetTarget(out package))
+            {
+                return package;
+            }
+            package = await Task.Run<HandyToolsPackage>(() =>
+			{
+                Microsoft.VisualStudio.Shell.ThreadHelper.ThrowIfNotOnUIThread();
+                IVsShell shell = GetGlobalService(typeof(SVsShell)) as IVsShell;
+                if (null == shell)
+                {
+                    return null;
+                }
+                IVsPackage vsPackage = null;
+                Guid PackageToBeLoadedGuid = new Guid(HandyToolsPackage.PackageGuidString);
+                shell.LoadPackage(ref PackageToBeLoadedGuid, out vsPackage);
+				return vsPackage as HandyToolsPackage;
+            });
+
+            return package;
+        }
+
+        public static WeakReference<HandyToolsPackage> Package { get => package_; }
+
+        public EnvDTE80.DTE2 DTE { get { return dte2_; } }
 		public SVsRunningDocumentTable RDT { get { return runningDocumentTable_; } }
 
 		public Options.OptionPageHandyTools Options
@@ -168,11 +211,11 @@ namespace HandyTools
 		public static void Release(ModelOpenAI aiModel)
 		{
 			HandyToolsPackage package;
-			if (!HandyToolsPackage.Package.TryGetTarget(out package))
+			if(null == Package || !Package.TryGetTarget(out package))
 			{
 				return;
 			}
-			package.ReleaseAIModel(aiModel);
+            package.ReleaseAIModel(aiModel);
 		}
 
 		public async Task<SVsServiceProvider> GetServiceProviderAsync()
@@ -238,6 +281,6 @@ namespace HandyTools
 		//private void OnProjectItemRenamed(ProjectItem projectItem, string oldName)
 		//{
 		//}
-		#endregion
+#endregion
 	}
 }

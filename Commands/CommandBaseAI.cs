@@ -37,11 +37,11 @@ namespace HandyTools.Commands
 
 		protected override async Task ExecuteAsync(OleMenuCmdEventArgs e)
 		{
-			HandyToolsPackage package;
-			if (!HandyToolsPackage.Package.TryGetTarget(out package))
-			{
-				return;
-			}
+            HandyToolsPackage package = await HandyToolsPackage.GetPackageAsync();
+            if (null == package)
+            {
+                return;
+            }
 			Initialize();
 			DocumentView documentView = await VS.Documents.GetActiveDocumentViewAsync();
 			(ModelOpenAI model,  SettingFile.AIModelSettings settingFile) = package.GetAIModel(Model, documentView.FilePath);

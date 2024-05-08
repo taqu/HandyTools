@@ -16,7 +16,7 @@ namespace HandyTools.Completion
 	internal class IntraGrayTextAdornmentTagger : ITagger<IntraTextAdornmentTag>
 	{
 		protected readonly IWpfTextView view_;
-		protected SnapshotSpan currentSpan_;
+		protected SnapshotSpan currentSpan_ = default;
 		private Brush grayBrush_;
 		private StackPanel stackPanel_;
 		public event EventHandler<SnapshotSpanEventArgs> TagsChanged;

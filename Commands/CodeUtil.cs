@@ -82,8 +82,8 @@ namespace HandyTools.Commands
         public static async Task<(string, string, int)> GetDefinitionCodeAsync(DocumentView documentView, SnapshotSpan selection)
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            HandyToolsPackage package;
-            if (!HandyToolsPackage.Package.TryGetTarget(out package))
+            HandyToolsPackage package = await HandyToolsPackage.GetPackageAsync();
+            if (null == package)
             {
                 return (null, null, 0);
             }

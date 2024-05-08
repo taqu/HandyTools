@@ -31,11 +31,9 @@ namespace HandyTools.Completion
 		private Brush transparentBrush_;
 
 		private bool showSuggestion_;
-		private bool inlineSuggestion_;
 		private bool isTextInsertion_;
 
 		private int currentTextLineNumber_;
-		private int currentVisualLineN_;
 		private int suggestionIndex_;
 		private int insertionPoint_;
 		private int userIndex_;
@@ -61,10 +59,9 @@ namespace HandyTools.Completion
 			this.view_.Caret.PositionChanged += OnViewCaretUpdate;
 		}
 
-		public void SetSuggestion(string newSuggestion, bool inline, int caretPoint)
+		public void SetSuggestion(string newSuggestion, bool _, int caretPoint)
 		{
 			ClearSuggestion();
-			inlineSuggestion_ = inline;
 
 			int lineN = GetCurrentTextLine();
 
