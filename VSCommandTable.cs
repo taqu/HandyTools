@@ -26,13 +26,13 @@ namespace HandyTools
         public const int HandyTools_ViewMenuGroup = 0x1003;
         public const int HandyTools_ViewCommandGroup = 0x1004;
         public const int HandyTools_ViewMenu = 0x1005;
-        public const int CommandShowChatWindow = 0x0000;
-        public const int CommandCompletion = 0x0001;
-        public const int CommandExplanation = 0x0002;
-        public const int CommandTranslation = 0x0003;
-        public const int CommandTranslateAndReplace = 0x0004;
-        public const int CommandAddDocument = 0x0005;
-        public const int CommandPreviewDocument = 0x0006;
-        public const int CommandLineCompletion = 0x0007;
+        public const int CommandShowChatWindow = 0x2000;
+        public const int CommandCompletion = 0x2001;
+        public const int CommandExplanation = 0x2002;
+        public const int CommandTranslation = 0x2003;
+        public const int CommandTranslateAndReplace = 0x2004;
+        public const int CommandAddDocument = 0x2005;
+        public const int CommandPreviewDocument = 0x2006;
+        public const int CommandLineCompletion = 0x2007;
     }
 }

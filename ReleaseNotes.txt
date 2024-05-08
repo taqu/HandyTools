@@ -1,3 +1,5 @@
+﻿- v.0.5.6
+  - Fix null exception
 - v.0.5.5
   - Delete Ollama API support
   - Add AI one line completion

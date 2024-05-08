@@ -1,4 +1,4 @@
-# Overview
+﻿# Overview
 Some tools for code editing.
 
 # Features
@@ -132,6 +132,8 @@ An example settings for OpenAI API endpoint,
 This software is distributed under two licenses 'The MIT License' or 'Public Domain', choose whichever you like.
 
 # Release
+- v.0.5.6
+  - Fix null exception
 - v.0.5.5
   - Delete Ollama API support
   - Add AI one line completion

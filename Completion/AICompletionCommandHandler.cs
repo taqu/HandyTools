@@ -1,6 +1,7 @@
-using Community.VisualStudio.Toolkit;
+﻿using Community.VisualStudio.Toolkit;
 using HandyTools.Commands;
 using HandyTools.Models;
+using HandyTools.ToolWindows;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Language.Intellisense;
 using Microsoft.VisualStudio.OLE.Interop;
@@ -206,8 +207,22 @@ namespace HandyTools.Completion
 				{
 					return;
 				}
-				completionTask_ = model.CompletionAsync(prompt, 0.0f, default, AIModelSettings_.MaxCompletionOutputSize);
-				string response = await completionTask_;
+				string response = string.Empty;
+				try
+				{
+
+					completionTask_ = model.CompletionAsync(prompt, 0.0f, default, AIModelSettings_.MaxCompletionOutputSize);
+					response = await completionTask_;
+				}catch(Exception ex)
+				{
+					ToolWindowPane windowPane = await ToolWindowChat.ShowAsync();
+					ToolWindowChatControl windowControl = windowPane.Content as ToolWindowChatControl;
+					if (null != windowControl)
+					{
+						windowControl.Output = ex.Message;
+					}
+					return;
+				}
 				completionTask_ = null;
 				package.ReleaseAIModel(model);
 				response = CodeUtil.GetLine(response);

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable" xmlns:xs="http://www.w3.org/2001/XMLSchema">
 	<Extern href="stdidcmd.h" />
 	<Extern href="vsshlids.h" />
@@ -152,14 +152,14 @@
 			<IDSymbol name="HandyTools_ViewCommandGroup" value="0x1004" />
 			<IDSymbol name="HandyTools_ViewMenu" value="0x1005" />
 
-			<IDSymbol name="CommandShowChatWindow" value="0x0000" />
-			<IDSymbol name="CommandCompletion" value="0x0001" />
-			<IDSymbol name="CommandExplanation" value="0x0002" />
-			<IDSymbol name="CommandTranslation" value="0x0003" />
-			<IDSymbol name="CommandTranslateAndReplace" value="0x0004" />
-			<IDSymbol name="CommandAddDocument" value="0x0005" />
-			<IDSymbol name="CommandPreviewDocument" value="0x0006" />
-			<IDSymbol name="CommandLineCompletion" value="0x0007" />
+			<IDSymbol name="CommandShowChatWindow" value="0x2000" />
+			<IDSymbol name="CommandCompletion" value="0x2001" />
+			<IDSymbol name="CommandExplanation" value="0x2002" />
+			<IDSymbol name="CommandTranslation" value="0x2003" />
+			<IDSymbol name="CommandTranslateAndReplace" value="0x2004" />
+			<IDSymbol name="CommandAddDocument" value="0x2005" />
+			<IDSymbol name="CommandPreviewDocument" value="0x2006" />
+			<IDSymbol name="CommandLineCompletion" value="0x2007" />
 		</GuidSymbol>
 	</Symbols>
 </CommandTable>
