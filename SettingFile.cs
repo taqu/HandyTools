@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.ComponentModel.Design;
 using System.IO;
 using System.Linq;
@@ -463,7 +463,7 @@ namespace HandyTools
 				node = FindChild(root, "UnifyLineFeed");
 				if (null != node)
 				{
-					Log.Output("ReadCode\n");
+					_ = Log.OutputAsync("ReadCode\n");
 					foreach (XmlNode child in node.ChildNodes)
 					{
 						if ("Code" != child.Name)
@@ -485,7 +485,7 @@ namespace HandyTools
 							continue;
 						}
 						lang = lang.Trim();
-						Log.Output("  Language " + lang + "\n");
+						_ = Log.OutputAsync("  Language " + lang + "\n");
 						Types.TypeLanguage typeLanguage = Types.TypeLanguage.C_Cpp;
 						switch (lang)
 						{
@@ -502,7 +502,7 @@ namespace HandyTools
 								continue;
 						}
 						string code = child.InnerText.Trim();
-						Log.Output("  code " + code + "\n");
+						_ = Log.OutputAsync("  code " + code + "\n");
 						Types.TypeLineFeed typeLineFeed = Types.TypeLineFeed.LF;
 						switch (code)
 						{
@@ -527,7 +527,7 @@ namespace HandyTools
 				node = FindChild(root, "UnifyEncoding");
 				if (null != node)
 				{
-					Log.Output("ReadEncoding\n");
+					_ = Log.OutputAsync("ReadEncoding\n");
 					foreach (XmlNode child in node.ChildNodes)
 					{
 						if ("Encoding" != child.Name)
@@ -535,7 +535,7 @@ namespace HandyTools
 							continue;
 						}
 						string encoding = child.InnerText.Trim();
-						Log.Output("  encoding " + encoding + "\n");
+						_ = Log.OutputAsync("  encoding " + encoding + "\n");
 						switch (encoding)
 						{
 							case "UTF8":
@@ -555,7 +555,7 @@ namespace HandyTools
 				node = FindChild(root, "AI");
 				if (null != node)
 				{
-					Log.Output("Read AI settings\n");
+					_ = Log.OutputAsync("Read AI settings\n");
 					foreach (XmlNode child in node.ChildNodes)
 					{
 						switch (child.Name)

@@ -1,4 +1,4 @@
-using EnvDTE;
+﻿using EnvDTE;
 using HandyTools.Models;
 using HandyTools.ToolWindows;
 using Microsoft.VisualStudio.Shell.Interop;
@@ -22,19 +22,18 @@ namespace HandyTools.Commands
 			FormatResponse = false;
 		}
 
-		protected override async Task RunTaskAsync(IVsThreadedWaitDialog4 waitDialog, ModelOpenAI model, DocumentView documentView, SnapshotSpan selection)
+		protected override async Task RunTaskAsync(ModelOpenAI model, DocumentView documentView, SnapshotSpan selection)
 		{
-			using IDisposable disposable = waitDialog as IDisposable;
+            await VS.StatusBar.ShowProgressAsync("Handy Tools: Step 0/3", 0, 3);
 			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
 			(string definitionCode, string indent, int _) = await CodeUtil.GetDefinitionCodeAsync(documentView, selection);
 			if (string.IsNullOrEmpty(definitionCode))
 			{
 				HandyToolsPackage.Release(model);
-				waitDialog.EndWaitDialog();
 				await VS.MessageBox.ShowAsync("Documentation needs definition codes.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
-				throw new Exception("Documentation needs definition codes.");
-			}
+				return;
+            }
 			string contentTypePrefix = documentView.TextView.TextDataModel.ContentType.DisplayName;
 			string prompt = PromptTemplate.Replace("{filetype}", contentTypePrefix);
 			prompt = prompt.Replace("{content}", definitionCode);
@@ -44,45 +43,26 @@ namespace HandyTools.Commands
 				prompt = prompt.Substring(0, MaxTextLength);
 			}
 
-			bool canceled = false;
-			waitDialog.UpdateProgress("In progress", "Handy Tools: 1/3 steps", "Handy Tools: 1/3 steps", 1, 3, false, out canceled);
-			if (canceled)
-			{
-				HandyToolsPackage.Release(model);
-				waitDialog.EndWaitDialog();
-				return;
-			}
+            await VS.StatusBar.ShowProgressAsync("Handy Tools: Step 1/3", 1, 3);
 			string response = string.Empty;
 			try
 			{
 				response = await model.CompletionAsync(prompt, Temperature);
 				response = PostProcessResponse(response);
 
-				waitDialog.UpdateProgress("In progress", "Handy Tools: 2/3 steps", "Handy Tools: 2/3 steps", 2, 3, false, out canceled);
-				if (canceled)
-				{
-					HandyToolsPackage.Release(model);
-					waitDialog.EndWaitDialog();
-					return;
-				}
+                await VS.StatusBar.ShowProgressAsync("Handy Tools: Step 2/3", 2, 3);
 			}
 			catch (Exception ex)
 			{
 				HandyToolsPackage.Release(model);
-				waitDialog.EndWaitDialog();
 				await VS.MessageBox.ShowAsync(ex.Message, buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
-				throw ex;
+				return;
 			}
 			string doxygenComment = CodeUtil.ExtractDoxygenComment(response, indent, LineFeed);
-			ToolWindowPane windowPane = await ToolWindowChat.ShowAsync();
-			ToolWindowChatControl windowControl = windowPane.Content as ToolWindowChatControl;
-			if (null != windowControl)
-			{
-				windowControl.Output = string.IsNullOrEmpty(doxygenComment)? response : doxygenComment;
-			}
+			await ShowOnChatWindowAsync(string.IsNullOrEmpty(doxygenComment) ? response : doxygenComment);
+
 			HandyToolsPackage.Release(model);
-			waitDialog.UpdateProgress("In progress", "Handy Tools: 3/3 steps", "Handy Tools: 3/3 steps", 3, 3, true, out _);
-			waitDialog.EndWaitDialog();
+            await VS.StatusBar.ShowProgressAsync("Handy Tools: Step 3/3", 3, 3);
 		}
 	}
 }

@@ -1,4 +1,4 @@
-using EnvDTE;
+﻿using EnvDTE;
 using HandyTools.Models;
 using HandyTools.ToolWindows;
 using Microsoft.VisualStudio.Shell.Interop;
@@ -7,12 +7,23 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using static HandyTools.SettingFile;
 using static HandyTools.Types;
+using static Microsoft.VisualStudio.Threading.AsyncReaderWriterLock;
 
 namespace HandyTools.Commands
 {
     internal class CommandAIBase<T> : BaseCommand<T> where T : class, new()
 	{
-		internal class CancelCallback : IVsThreadedWaitDialogCallback
+		public static async Task ShowOnChatWindowAsync(string Text)
+		{
+            ToolWindowPane windowPane = await ToolWindowChat.ShowAsync();
+            ToolWindowChatControl windowControl = windowPane.Content as ToolWindowChatControl;
+            if (null != windowControl)
+            {
+                windowControl.Output = Text;
+            }
+        }
+
+        internal class CancelCallback : IVsThreadedWaitDialogCallback
 		{
 			public CancelCallback(ModelOpenAI model)
 			{
@@ -37,6 +48,7 @@ namespace HandyTools.Commands
 
 		protected override async Task ExecuteAsync(OleMenuCmdEventArgs e)
 		{
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             HandyToolsPackage package = await HandyToolsPackage.GetPackageAsync();
             if (null == package)
             {
@@ -55,24 +67,7 @@ namespace HandyTools.Commands
 			Temperature = settingFile.Temperature;
 			BeforeRun(settingFile);
 			SnapshotSpan selection = documentView.TextView.Selection.SelectedSpans.FirstOrDefault();
-
-			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-			IVsThreadedWaitDialogFactory dialogFactory = (IVsThreadedWaitDialogFactory)await VS.Services.GetThreadedWaitDialogAsync();
-			IVsThreadedWaitDialog4 threadedWaitDialog = dialogFactory.CreateInstance();
-			CancelCallback cancelCallback = new CancelCallback(model);
-			threadedWaitDialog.StartWaitDialogWithCallback(
-				"Handy Tools AI",
-				"Chat Agent is working on it ...",
-				"",
-				null,
-				"Handy Tools AI working ...",
-				true,
-				30, true,
-				3,
-				0,
-				cancelCallback);
-
-			await RunTaskAsync(threadedWaitDialog, model, documentView, selection);
+			await RunTaskAsync(model, documentView, selection);
 		}
 
 		protected async System.Threading.Tasks.Task<(SnapshotSpan selection, string text)> GetCurrentSelectionAsync(DocumentView documentView, SnapshotSpan selection)
@@ -113,10 +108,10 @@ namespace HandyTools.Commands
 			return documentView.TextView.Selection.SelectedSpans.FirstOrDefault();
 		}
 
-		protected virtual async Task RunTaskAsync(IVsThreadedWaitDialog4 waitDialog, ModelOpenAI model, DocumentView documentView, SnapshotSpan selection)
+		protected virtual async Task RunTaskAsync(ModelOpenAI model, DocumentView documentView, SnapshotSpan selection)
 		{
-			using IDisposable disposable = waitDialog as IDisposable;
-			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            await VS.StatusBar.ShowProgressAsync("Handy Tools: Step 0/3", 0, 3);
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
 			string text = null;
 			if (selection.Length <= 0)
@@ -145,9 +140,8 @@ namespace HandyTools.Commands
 			if (string.IsNullOrEmpty(text))
 			{
 				HandyToolsPackage.Release(model);
-				waitDialog.EndWaitDialog();
 				await VS.MessageBox.ShowAsync("Handy Tools: Please select text or not empty line.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
-				throw new Exception("Please select text or not empty line.");
+				return;
 			}
 			int selectionStartLineNumber = documentView.TextView.TextBuffer.CurrentSnapshot.GetLineNumberFromPosition(selection.Start.Position);
 
@@ -160,11 +154,10 @@ namespace HandyTools.Commands
 			{
 				prompt = prompt.Substring(0, MaxTextLength);
 			}
-			waitDialog.UpdateProgress("In progress", "Handy Tools: 1/3 steps", "Handy Tools: 1/3 steps", 1, 3, true, out canceled);
+            await VS.StatusBar.ShowProgressAsync("Handy Tools: Step 1/3", 1, 3);
 			if (canceled)
 			{
 				HandyToolsPackage.Release(model);
-				waitDialog.EndWaitDialog();
 				return;
 			}
 			string response = string.Empty;
@@ -173,20 +166,18 @@ namespace HandyTools.Commands
 				response = await model.CompletionAsync(prompt, Temperature);
 				response = PostProcessResponse(response);
 
-				waitDialog.UpdateProgress("In progress", "Handy Tools: 2/3 steps", "Handy Tools: 2/3 steps", 2, 3, true, out canceled);
+                await VS.StatusBar.ShowProgressAsync("Handy Tools: Step 2/3", 2, 3);
 				if (canceled)
 				{
 					HandyToolsPackage.Release(model);
-					waitDialog.EndWaitDialog();
 					return;
 				}
 			}
 			catch (Exception ex)
 			{
 				HandyToolsPackage.Release(model);
-				waitDialog.EndWaitDialog();
 				await VS.MessageBox.ShowAsync("Handy Tools: " + ex.Message, buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
-				throw ex;
+				return;
 			}
 			switch (Response)
 			{
@@ -222,8 +213,7 @@ namespace HandyTools.Commands
 				(await VS.GetServiceAsync<DTE, DTE>()).ExecuteCommand("Edit.FormatSelection");
 			}
 			HandyToolsPackage.Release(model);
-			waitDialog.UpdateProgress("In progress", "Handy Tools: 3/3 steps", "Handy Tools: 3/3 steps", 3, 3, true, out _);
-			waitDialog.EndWaitDialog();
+            await VS.StatusBar.ShowProgressAsync("Handy Tools: Step 3/3", 3, 3);
 		}
 
 		private static Regex StripMarkdownCode = new Regex(@"```.*\r?\n?");

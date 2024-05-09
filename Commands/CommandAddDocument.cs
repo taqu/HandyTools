@@ -1,4 +1,4 @@
-using EnvDTE;
+﻿using EnvDTE;
 using HandyTools.Models;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
@@ -21,59 +21,44 @@ namespace HandyTools.Commands
 			FormatResponse = settingFile.FormatResponse;
 		}
 
-		protected override async Task RunTaskAsync(IVsThreadedWaitDialog4 waitDialog, ModelOpenAI model, DocumentView documentView, SnapshotSpan selection)
+		protected override async Task RunTaskAsync(ModelOpenAI model, DocumentView documentView, SnapshotSpan selection)
 		{
-			using IDisposable disposable = waitDialog as IDisposable;
+            await VS.StatusBar.ShowProgressAsync("Handy Tools: Step 0/3", 0, 3);
 			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
 			(string definitionCode, string indent, int declStartLine) = await CodeUtil.GetDefinitionCodeAsync(documentView, selection);
 			if (string.IsNullOrEmpty(definitionCode))
 			{
 				HandyToolsPackage.Release(model);
-				waitDialog.EndWaitDialog();
 				await VS.MessageBox.ShowAsync("Handy Tools: Documentation needs definition codes.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
-				throw new Exception("Documentation needs definition codes.");
+				return;
 			}
 			string contentTypePrefix = documentView.TextView.TextDataModel.ContentType.DisplayName;
 			string prompt = PromptTemplate.Replace("{filetype}", contentTypePrefix);
 			prompt = PromptTemplate.Replace("{content}", definitionCode);
 
-			bool canceled = false;
-			waitDialog.UpdateProgress("In progress", "Handy Tools: 1/3 steps", "Handy Tools: 1/3 steps", 1, 3, false, out canceled);
-			if (canceled)
-			{
-				HandyToolsPackage.Release(model);
-				waitDialog.EndWaitDialog();
-				return;
-			}
+            await VS.StatusBar.ShowProgressAsync("Handy Tools: Step 1/3", 1, 3);
+			string rawResponse = string.Empty;
 			string response = string.Empty;
 			try
 			{
-				response = await model.CompletionAsync(prompt, Temperature);
-				await Log.OutputAsync(response);
-				response = PostProcessResponse(response);
-				waitDialog.UpdateProgress("In progress", "Handy Tools: 2/3 steps", "Handy Tools: 2/3 steps", 2, 3, false, out canceled);
-				if (canceled)
-				{
-					HandyToolsPackage.Release(model);
-					waitDialog.EndWaitDialog();
-					return;
-				}
+                rawResponse = await model.CompletionAsync(prompt, Temperature);
+				response = PostProcessResponse(rawResponse);
+                await VS.StatusBar.ShowProgressAsync("Handy Tools: Step 2/3", 2, 3);
 			}
 			catch (Exception ex)
 			{
 				HandyToolsPackage.Release(model);
-				waitDialog.EndWaitDialog();
 				await VS.MessageBox.ShowAsync(ex.Message, buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
-				throw ex;
+				return;
 			}
 			response = CodeUtil.ExtractDoxygenComment(response, indent, LineFeed);
 			if (string.IsNullOrEmpty(response))
 			{
 				HandyToolsPackage.Release(model);
-				waitDialog.EndWaitDialog();
-				await VS.MessageBox.ShowAsync("Handy Tools: AI response is not appropriate.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
-				throw new Exception("AI response is not appropriate.");
+                await ShowOnChatWindowAsync(rawResponse);
+                await VS.MessageBox.ShowAsync("Handy Tools: AI response is not appropriate.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);
+				return;
 			}
 
 			ITextBuffer textBuffer = documentView.TextView.TextBuffer;
@@ -105,8 +90,7 @@ namespace HandyTools.Commands
 				(await VS.GetServiceAsync<DTE, DTE>()).ExecuteCommand("Edit.FormatSelection");
 			}
 			HandyToolsPackage.Release(model);
-			waitDialog.UpdateProgress("In progress", "Handy Tools: 3/3 steps", "Handy Tools: 3/3 steps", 3, 3, true, out _);
-			waitDialog.EndWaitDialog();
+            await VS.StatusBar.ShowProgressAsync("Handy Tools: Step 3/3", 3, 3);
 		}
 	}
 }

@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.Text;
+﻿using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Editor.OptionsExtensionMethods;
 using Microsoft.VisualStudio.Text.Tagging;
@@ -295,7 +295,7 @@ namespace HandyTools.Completion
 			}
 			catch (ArgumentOutOfRangeException e)
 			{
-				Log.Output(string.Format("{0}\n", e.ToString()));
+                _ = Log.OutputAsync(string.Format("{0}\n", e.ToString()));
 			}
 		}
 

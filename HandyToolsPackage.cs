@@ -1,4 +1,4 @@
-global using Community.VisualStudio.Toolkit;
+﻿global using Community.VisualStudio.Toolkit;
 global using Microsoft.VisualStudio.Shell;
 global using System;
 global using Task = System.Threading.Tasks.Task;
@@ -78,16 +78,7 @@ namespace HandyTools
                 return true;
             }
 			package = null;
-            IVsShell shell = GetGlobalService(typeof(SVsShell)) as IVsShell;
-            if (null == shell)
-            {
-                return false;
-            }
-            IVsPackage vsPackage = null;
-            Guid PackageToBeLoadedGuid = new Guid(HandyToolsPackage.PackageGuidString);
-            shell.LoadPackage(ref PackageToBeLoadedGuid, out vsPackage);
-            package = vsPackage as HandyToolsPackage;
-			return null != package;
+            return false;
         }
 
         public static async Task<HandyToolsPackage> GetPackageAsync()
