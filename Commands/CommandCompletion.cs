@@ -27,7 +27,6 @@ namespace HandyTools.Commands
 
 		protected override async Task RunTaskAsync(ModelOpenAI model, DocumentView documentView, SnapshotSpan selection)
 		{
-            await VS.StatusBar.ShowProgressAsync("Handy Tools: Step 0/3", 0, 3);
 			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
 			(string prefix, string suffix) = CodeUtil.GetCodeAround(documentView, selection.Start, maxCompletionInputSize_);

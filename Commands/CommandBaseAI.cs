@@ -110,7 +110,6 @@ namespace HandyTools.Commands
 
 		protected virtual async Task RunTaskAsync(ModelOpenAI model, DocumentView documentView, SnapshotSpan selection)
 		{
-            await VS.StatusBar.ShowProgressAsync("Handy Tools: Step 0/3", 0, 3);
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
 			string text = null;

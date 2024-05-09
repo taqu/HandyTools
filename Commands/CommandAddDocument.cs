@@ -23,7 +23,6 @@ namespace HandyTools.Commands
 
 		protected override async Task RunTaskAsync(ModelOpenAI model, DocumentView documentView, SnapshotSpan selection)
 		{
-            await VS.StatusBar.ShowProgressAsync("Handy Tools: Step 0/3", 0, 3);
 			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
 			(string definitionCode, string indent, int declStartLine) = await CodeUtil.GetDefinitionCodeAsync(documentView, selection);
@@ -66,7 +65,6 @@ namespace HandyTools.Commands
 			string declLineText = declLine.GetText();
 			ITextSnapshotLine line = textBuffer.CurrentSnapshot.GetLineFromLineNumber(declStartLine);
 			await Log.OutputAsync(line.GetText());
-			string lineText = line.GetText();
 			string linefeed = string.Empty;
 			switch (LineFeed)
 			{
