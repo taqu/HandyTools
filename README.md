@@ -17,7 +17,7 @@ Just right click on the target code, and select command from Handy Tools submenu
 
 | Command                 | Place                 | Description                                                        |
 | :------                 | :----                 | :----------                                                        |
-| Complete                | Cursor Position       | Fill in the middle at the cursor position.                         |
+| Add Multi Line Complete | Cursor Position       | Fill in the middle at the cursor position.                         |
 | Explain Function        | Selection or one line | Explain a funciton which the selection or one line is overlapping. |
 | Translate               | Selection             | Translate the selected text on the chat view.                      |
 | Add Doxygen             | Selection or one line | Add Doxygen style document for a function,                         |
@@ -25,7 +25,11 @@ Just right click on the target code, and select command from Handy Tools submenu
 | Preview Doxygen         | Selection of one line | Preview Doxygen style document for a function on the chat view.    |
 | Add One Line Completion | Cursor Position       | Fill in the middle at the cursor position only one line            |
 
-![](./doc/HandyTools00.gif)
+- Add Doxygen comment
+<img src="./doc/HandyTools00.gif" width="50%" alt="Add Doxygen comment"/>
+
+- One line completion
+<img src="./doc/HandyTools01.gif" width="50%" alt="One line completion"/>
 
 *Notice: now supports only C/C++*
 
@@ -132,6 +136,9 @@ An example settings for OpenAI API endpoint,
 This software is distributed under two licenses 'The MIT License' or 'Public Domain', choose whichever you like.
 
 # Release
+- v.0.5.7
+  - Change progress display
+  - Output logs for debugging
 - v.0.5.6
   - Fix null exception
 - v.0.5.5
