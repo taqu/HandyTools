@@ -210,17 +210,11 @@ namespace HandyTools.Completion
 				string response = string.Empty;
 				try
 				{
-
 					completionTask_ = model.CompletionAsync(prompt, 0.0f, default, AIModelSettings_.MaxCompletionOutputSize);
 					response = await completionTask_;
 				}catch(Exception ex)
 				{
-					ToolWindowPane windowPane = await ToolWindowChat.ShowAsync();
-					ToolWindowChatControl windowControl = windowPane.Content as ToolWindowChatControl;
-					if (null != windowControl)
-					{
-						windowControl.Output = ex.Message;
-					}
+					await Log.OutputAsync(ex.Message + "\n");
 					return;
 				}
 				completionTask_ = null;
