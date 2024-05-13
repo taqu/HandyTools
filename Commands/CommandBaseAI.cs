@@ -56,7 +56,7 @@ namespace HandyTools.Commands
             }
 			Initialize();
 			DocumentView documentView = await VS.Documents.GetActiveDocumentViewAsync();
-			(ModelOpenAI model,  SettingFile.AIModelSettings settingFile) = package.GetAIModel(Model, documentView.FilePath);
+            (ModelOpenAI model,  SettingFile.AIModelSettings settingFile) = package.GetAIModel(Model, documentView.FilePath);
 			if (null == model)
 			{
 				await VS.MessageBox.ShowAsync("Failed to load AI model. Please check settings.", buttons: OLEMSGBUTTON.OLEMSGBUTTON_OK);

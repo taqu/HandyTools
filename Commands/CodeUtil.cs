@@ -1,4 +1,4 @@
-using Community.VisualStudio.Toolkit;
+﻿using Community.VisualStudio.Toolkit;
 using EnvDTE;
 using Microsoft.VisualStudio.RpcContracts.Utilities;
 using Microsoft.VisualStudio.Text;
@@ -94,16 +94,24 @@ namespace HandyTools.Commands
             {
                 return (null, null, 0);
             }
-            ProjectItem projectItem = package.DTE.ActiveDocument.ProjectItem;
+            ProjectItem projectItem = package.DTE.Solution.FindProjectItem(documentView.FilePath);
             if (null == projectItem)
             {
                 return (null, null, 0);
             }
             FileCodeModel fileCodeModel = projectItem.FileCodeModel;
+            if (null == fileCodeModel)
+            {
+                return (null, null, 0);
+            }
+            //TextDocument textDocument = projectItem.Document.Object("TextDocument") as TextDocument;
+            CodeElements codeElements = fileCodeModel.CodeElements;
+            if (null == codeElements)
+            {
+                return (null, null, 0);
+            }
             int selectionStart = GetCharOffsetWithLF(textSnapshot, selection);
-            (VCCodeFunction, bool) result = FindCodeElement(fileCodeModel.CodeElements, selectionStart, documentView.Document.FilePath);
-            VCCodeFunction codeFunction = result.Item1;
-            bool declaration = result.Item2;
+            VCCodeFunction codeFunction = FindCodeElement(codeElements, selectionStart, documentView.FilePath);
             if (null == codeFunction)
             {
                 return (null, null, 0);
@@ -113,133 +121,126 @@ namespace HandyTools.Commands
                 return (null, null, 0);
             }
 
-            TextPoint declStartPoint = declaration
-                ? codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration)
-                : codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDefinition);
-            EditPoint defineStartPoint = codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDefinition).CreateEditPoint();
+            TextPoint declStartPoint = codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
+            TextPoint defineStartPoint = codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDefinition);
             TextPoint defineEndPoint = codeFunction.get_EndPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDefinition);
-#if false
-            if (null == codeFunction.ProjectItem.Document)
-            {
-                needClose = true;
-                codeFunction.ProjectItem.Open(EnvDTE.Constants.vsViewKindCode);
-                if(null == codeFunction.ProjectItem.Document)
-                {
-                    return (null, null, 0);
-                }
-            }
-            Document document = codeFunction.ProjectItem.Document;
-            TextDocument textDocument = document.Object("TextDocument") as EnvDTE.TextDocument;
-#endif
-            TextDocument textDocument = codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration).Parent;
+            EditPoint defineEditPoint = defineStartPoint.CreateEditPoint();
+            TextDocument textDocument = declStartPoint.Parent;
             if (null == textDocument)
             {
                 return (null, null, 0);
             }
 
-            string textCode = defineStartPoint.GetText(defineEndPoint);
+            if (textDocument.Parent.FullName != documentView.FilePath && defineStartPoint.Parent.Parent.FullName == documentView.FilePath)
+            {
+                declStartPoint = defineStartPoint;
+            }
+
+            string textCode = defineEditPoint.GetText(defineEndPoint);
             string indent = string.Empty;
             int lineNumber = 0;
-            if (null != declStartPoint && 0 < declStartPoint.LineCharOffset)
+            if (null != declStartPoint)
             {
                 lineNumber = Math.Max(declStartPoint.Line - 1, 0);
-                string lineString = textBuffer.CurrentSnapshot.GetLineFromPosition(selection.Start.Position).GetText();
-                StringBuilder stringBuilder = new StringBuilder(lineString.Length);
-                foreach(char c in lineString)
+                if (0 < declStartPoint.LineCharOffset)
                 {
-                    if (!char.IsWhiteSpace(c))
+                    string lineString = textBuffer.CurrentSnapshot.GetLineFromPosition(selection.Start.Position).GetText();
+                    StringBuilder stringBuilder = new StringBuilder(lineString.Length);
+                    foreach (char c in lineString)
                     {
-                        break;
+                        if (!char.IsWhiteSpace(c))
+                        {
+                            break;
+                        }
+                        stringBuilder.Append(c);
                     }
-                    stringBuilder.Append(c);
+                    indent = stringBuilder.ToString();
                 }
-                indent = stringBuilder.ToString();
             }
             return (textCode, indent, lineNumber);
         }
 
-        public static (VCCodeFunction, bool) FindCodeElement(CodeElements elements, int selectionStart, string filePath)
+        public static VCCodeFunction FindCodeElement(CodeElements elements, int selectionStart, string filePath)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             //EnvDTE.TextPoint has one base offset, so offset selection points.
             selectionStart = selectionStart + 1;
-            foreach (CodeElement codeElement in elements)
+            foreach (CodeElement codeElement in elements.OfType<CodeElement>())
             {
                 if (codeElement.Kind != vsCMElement.vsCMElementFunction || !(codeElement is VCCodeFunction))
                 {
-                    (VCCodeFunction, bool) recurse = FindCodeElementRecursive(codeElement.Children, selectionStart, filePath);
-                    if (null != recurse.Item1)
+                    VCCodeFunction recurse = FindCodeElementRecursive(codeElement.Children, selectionStart, filePath);
+                    if (null != recurse)
                     {
                         return recurse;
                     }
                     continue;
                 }
                 VCCodeFunction codeFunction = codeElement as VCCodeFunction;
-                bool declaration;
                 TextPoint startPoint;
                 TextPoint endPoint;
-                if (codeFunction.DeclarationText.Contains(codeFunction.BodyText))
+                TextPoint declStart = codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
+                if (declStart.Parent.Parent.FullName == filePath)
                 {
-                    declaration = true;
-                    startPoint = codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
+
+                    startPoint = declStart;
                     endPoint = codeFunction.get_EndPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
                 }
                 else
                 {
-                    declaration = false;
                     startPoint = codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDefinition);
                     endPoint = codeFunction.get_EndPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDefinition);
+                    //Log.Output(string.Format("{0} {1} - {2}\n{3}\n\n{4}\n", codeFunction.Name, startPoint.AbsoluteCharOffset, endPoint.AbsoluteCharOffset, codeFunction.DeclarationText, codeFunction.BodyText));
                 }
-                Log.Output(string.Format("{0} {1} - {2}\n{3}\n\n{4}\n", codeFunction.Name, startPoint.AbsoluteCharOffset, endPoint.AbsoluteCharOffset, codeFunction.DeclarationText, codeFunction.BodyText));
+
                 if (startPoint.AbsoluteCharOffset <= selectionStart && selectionStart <= endPoint.AbsoluteCharOffset)
                 {
-                    return (codeFunction, declaration);
+                    return codeFunction;
                 }
             }
-            return (null, false);
+            return null;
         }
 
-        public static (VCCodeFunction, bool) FindCodeElementRecursive(CodeElements elements, int selectionStart, string filePath)
+        public static VCCodeFunction FindCodeElementRecursive(CodeElements elements, int selectionStart, string filePath)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             if (null == elements)
             {
-                return (null, false);
+                return null;
             }
-            foreach (CodeElement codeElement in elements)
+            foreach (CodeElement codeElement in elements.OfType<CodeElement>())
             {
                 if (codeElement.Kind != vsCMElement.vsCMElementFunction || !(codeElement is VCCodeFunction))
                 {
-                    (VCCodeFunction, bool) recurse = FindCodeElementRecursive(codeElement.Children, selectionStart, filePath);
-                    if (null != recurse.Item1)
+                    VCCodeFunction recurse = FindCodeElementRecursive(codeElement.Children, selectionStart, filePath);
+                    if (null != recurse)
                     {
                         return recurse;
                     }
                     continue;
                 }
                 VCCodeFunction codeFunction = codeElement as VCCodeFunction;
-                bool declaration;
                 TextPoint startPoint;
                 TextPoint endPoint;
-                if (codeFunction.DeclarationText.Contains(codeFunction.BodyText))
+                TextPoint declStart = codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
+                if(declStart.Parent.Parent.FullName == filePath)
                 {
-                    declaration = true;
-                    startPoint = codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
+
+                    startPoint = declStart;
                     endPoint = codeFunction.get_EndPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDeclaration);
                 }
                 else
                 {
-                    declaration = false;
                     startPoint = codeFunction.get_StartPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDefinition);
                     endPoint = codeFunction.get_EndPointOf(vsCMPart.vsCMPartWholeWithAttributes, vsCMWhere.vsCMWhereDefinition);
+                    //Log.Output(string.Format("{0} {1} - {2}\n{3}\n\n{4}\n", codeFunction.Name, startPoint.AbsoluteCharOffset, endPoint.AbsoluteCharOffset, codeFunction.DeclarationText, codeFunction.BodyText));
                 }
-                Log.Output(string.Format("{0} {1} - {2}\n{3}\n\n{4}\n", codeFunction.Name, startPoint.AbsoluteCharOffset, endPoint.AbsoluteCharOffset, codeFunction.DeclarationText, codeFunction.BodyText));
                 if (startPoint.AbsoluteCharOffset <= selectionStart && selectionStart <= endPoint.AbsoluteCharOffset)
                 {
-                    return (codeFunction, declaration);
+                    return codeFunction;
                 }
             }
-            return (null, false);
+            return null;
         }
 
         public static string AddIndent(string text, string indent, Types.TypeLineFeed typeLineFeed)

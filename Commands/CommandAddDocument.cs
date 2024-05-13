@@ -61,8 +61,6 @@ namespace HandyTools.Commands
 			}
 
 			ITextBuffer textBuffer = documentView.TextView.TextBuffer;
-			ITextSnapshotLine declLine = textBuffer.CurrentSnapshot.GetLineFromLineNumber(declStartLine);
-			string declLineText = declLine.GetText();
 			ITextSnapshotLine line = textBuffer.CurrentSnapshot.GetLineFromLineNumber(declStartLine);
 			await Log.OutputAsync(line.GetText());
 			string linefeed = string.Empty;
