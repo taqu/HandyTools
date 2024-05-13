@@ -136,6 +136,11 @@ An example settings for OpenAI API endpoint,
 This software is distributed under two licenses 'The MIT License' or 'Public Domain', choose whichever you like.
 
 # Release
+- v.0.5.9
+  - Work around to fix exceptions while accessing CodeElements.GetEnumerator
+  - Change algorithm of searching the definition
+- v.0.5.8
+  - Change logging method of one line completion
 - v.0.5.7
   - Change progress display
   - Output logs for debugging

@@ -41,7 +41,7 @@
 				<Icon guid="ImageCatalogGuid" id="Writeable" />
 				<CommandFlag>IconIsMoniker</CommandFlag>
 				<Strings>
-					<ButtonText>Complete</ButtonText>
+					<ButtonText>Multi Line Completion</ButtonText>
 				</Strings>
 			</Button>
 			<Button guid="HandyTools" id="CommandExplanation" priority="0x0001" type="Button">
@@ -83,7 +83,7 @@
 				<Icon guid="ImageCatalogGuid" id="Writeable" />
 				<CommandFlag>IconIsMoniker</CommandFlag>
 				<Strings>
-					<ButtonText>Line Completion</ButtonText>
+					<ButtonText>One Line Completion</ButtonText>
 				</Strings>
 			</Button>
 		</Buttons>
