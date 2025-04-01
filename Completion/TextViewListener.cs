@@ -1,5 +1,4 @@
-﻿using CodeiumVS.Languages;
-using EnvDTE;
+﻿using EnvDTE;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Editor;
 using Microsoft.VisualStudio.Language.Intellisense;
@@ -84,7 +83,7 @@ internal class HandyToolsCompletionHandler : IOleCommandTarget, IDisposable
                 return;
             }
 
-            IList<Packets.CompletionItem>? list = await package_.LanguageServer.GetCompletionsAsync(
+            IList<Completion>? list = await package_.CompletionModel.GetCompletionsAsync(
                 textDocument_.FilePath,
                 text,
                 language_,
@@ -99,7 +98,7 @@ internal class HandyToolsCompletionHandler : IOleCommandTarget, IDisposable
 
             int res = vsTextView_.GetCaretPos(out lineN, out characterN);
             String line = textView_.TextBuffer.CurrentSnapshot.GetLineFromLineNumber(lineN).GetText();
-            Debug.Print("completions " + list.Count.ToString());
+				await Log.OutputAsync("completions " + list.Count.ToString());
 
             if (res != VSConstants.S_OK)
             {
@@ -108,7 +107,7 @@ internal class HandyToolsCompletionHandler : IOleCommandTarget, IDisposable
 
             if (list != null && list.Count > 0)
             {
-                Debug.Print("completions " + list.Count.ToString());
+					await Log.OutputAsync("completions " + list.Count.ToString());
 
                 string prefix = line.Substring(0, Math.Min(characterN, line.Length));
                 suggestions_ = ParseCompletion(list, text, line, prefix, characterN);
@@ -132,56 +131,67 @@ internal class HandyToolsCompletionHandler : IOleCommandTarget, IDisposable
         }
     }
 
-    List<Tuple<String, String>> ParseCompletion(IList<CompletionItem> completionItems,
+    List<Tuple<String, String>> ParseCompletion(IList<Completion> completionItems,
                                                 string text, string line, string prefix,
                                                 int cursorPoint)
     {
-        if (completionItems == null || completionItems.Count == 0) { return null; }
+        if (completionItems == null || completionItems.Count <=0) {
+                return null;
+            }
 
-        List<Tuple<String, String>> list = new(completionItems.Count);
-        for (int i = 0; i < completionItems.Count; i++)
+        List<Tuple<String, String>> list = new List<Tuple<String, String>>(completionItems.Count);
+        for (int i = 0; i < completionItems.Count; ++i)
         {
-            Packets.CompletionItem completionItem = completionItems[i];
-            int startOffset = (int)completionItem.range.startOffset;
-            int endOffset = (int)completionItem.range.endOffset;
-            if (completionItem.completionParts.Count == 0) { continue; }
-            int insertionStart = (int)completionItem.completionParts[0].offset;
+				Completion completion = completionItems[i];
+                if(string.IsNullOrEmpty(completion.text)){
+                    continue;
+                }
+            int startOffset = completion.startOffset;
+            int endOffset = completion.endOffset;
 
             if (!textDocument_.Encoding.IsSingleByte)
             {
                 startOffset = Utf8OffsetToUtf16Offset(text, startOffset);
                 endOffset = Utf8OffsetToUtf16Offset(text, endOffset);
-                insertionStart = Utf8OffsetToUtf16Offset(text, insertionStart);
             }
-            if (endOffset > text.Length) { endOffset = text.Length; }
+            if (text.Length<endOffset) {
+                    endOffset = text.Length;
+                }
             string end = text.Substring(endOffset);
-            String completionText = completionItems[i].completion.text;
+            String completionText = completion.text;
             if (!String.IsNullOrEmpty(end))
             {
                 int endNewline = StringUtils.IndexOfNewLine(end);
 
-                if (endNewline <= -1)
-                    endNewline = end.Length;
+                    if (endNewline <= -1)
+                    {
+                        endNewline = end.Length;
+                    }
 
                 completionText = completionText + end.Substring(0, endNewline);
             }
             int offset = StringUtils.CheckSuggestion(completionText, prefix);
-            if (offset < 0 || offset > completionText.Length) { continue; }
+            if (offset < 0 || completionText.Length < offset) {
+                    continue;
+                }
 
             completionText = completionText.Substring(offset);
-            string completionID = completionItem.completion.completionId;
-            var set = new Tuple<String, String>(completionText, completionID);
+            var set = new Tuple<String, String>(completionText, completion.id);
 
             // Filter out completions that don't match the current intellisense prefix
             ICompletionSession session = provider_.CompletionBroker.GetSessions(textView_).FirstOrDefault();
             if (session != null && session.SelectedCompletionSet != null)
             {
-                var completion = session.SelectedCompletionSet.SelectionStatus.Completion;
-                if (completion == null) { continue; }
-                string intellisenseSuggestion = completion.InsertionText;
+					Microsoft.VisualStudio.Language.Intellisense.Completion completionStatus = session.SelectedCompletionSet.SelectionStatus.Completion;
+                if (completionStatus == null) {
+                        continue;
+                    }
+                string intellisenseSuggestion = completionStatus.InsertionText;
                 ITrackingSpan intellisenseSpan = session.SelectedCompletionSet.ApplicableTo;
                 SnapshotSpan span = intellisenseSpan.GetSpan(intellisenseSpan.TextBuffer.CurrentSnapshot);
-                if (span.Length > intellisenseSuggestion.Length) { continue; }
+                if (intellisenseSuggestion.Length< span.Length) {
+                        continue;
+                    }
                 string intellisenseInsertion = intellisenseSuggestion.Substring(span.Length);
                 if (!completionText.StartsWith(intellisenseInsertion))
                 {
@@ -237,7 +247,7 @@ internal class HandyToolsCompletionHandler : IOleCommandTarget, IDisposable
         ThreadHelper.JoinableTaskFactory
             .RunAsync(async delegate {
                 await Log.OutputAsync($"Accepted completion {proposalId}");
-                await CodeiumVSPackage.Instance.LanguageServer.AcceptCompletionAsync(proposalId);
+                await HandyToolsPackage.GetPackage().CompletionModel.AcceptCompletionAsync(proposalId);
             })
             .FireAndForget(true);
     }
@@ -286,7 +296,7 @@ internal class HandyToolsCompletionHandler : IOleCommandTarget, IDisposable
 
             if (textDocument_ != null)
             {
-                    Log.Output("CodeiumCompletionHandler filepath = " + textDocument_.FilePath);
+                    Log.Output("HandyToolsCompletionHandler filepath = " + textDocument_.FilePath);
 
                 if (!provider.documentDictionary.ContainsKey(textDocument_.FilePath.ToLower()))
                 {
@@ -309,7 +319,7 @@ internal class HandyToolsCompletionHandler : IOleCommandTarget, IDisposable
             {
                 try
                 {
-                    completeSuggestionCommand_ = GetCommandsAsync("CodeiumAcceptCompletion").Result;
+                    completeSuggestionCommand_ = GetCommandsAsync("HandyToolsAcceptCompletion").Result;
                 }
                 catch (Exception e)
                 {

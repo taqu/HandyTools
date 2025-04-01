@@ -2,6 +2,7 @@
 global using Microsoft.VisualStudio.Shell;
 global using System;
 global using Task = System.Threading.Tasks.Task;
+using HandyTools.Completion;
 using HandyTools.Models;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TextManager.Interop;
@@ -219,14 +220,25 @@ namespace HandyTools
 			return ToolkitPackage.GetGlobalService(typeof(SVsTextManager)) as IVsTextManager;
 		}
 
+		public async Task<CompletionModel> GetCompletionModelAsync()
+		{
+			if(null != completionModel_)
+			{
+				return completionModel_;
+			}
+			completionModel_ = await CompletionModel.InitializeAsync();
+			return completionModel_;
+		}
+
 		static private WeakReference<HandyToolsPackage> package_;
 		private EnvDTE80.DTE2 dte2_;
 		private SVsRunningDocumentTable runningDocumentTable_;
 		private RunningDocTableEvents runningDocTableEvents_;
 		private EnvDTE.SolutionEvents solutionEvents_;
 		private EnvDTE.ProjectItemsEvents projectItemsEvents_;
-		private List<ModelOpenAI> aiModels_ = new List<ModelOpenAI>();
 		private object lockObject_ = new object();
+		private List<ModelOpenAI> aiModels_ = new List<ModelOpenAI>();
+		private CompletionModel completionModel_;
 
 		/// <summary>
 		/// Initialization of the package; this method is called right after the package is sited, so this is the place
