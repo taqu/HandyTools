@@ -1,560 +1,663 @@
-﻿using Microsoft.VisualStudio.Text;
-using Microsoft.VisualStudio.Text.Editor;
-using Microsoft.VisualStudio.Text.Editor.OptionsExtensionMethods;
-using Microsoft.VisualStudio.Text.Tagging;
-using Microsoft.VisualStudio.Threading;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text.RegularExpressions;
+﻿using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Documents;
 using System.Windows.Media;
+using System.Windows.Documents;
+using Microsoft.VisualStudio.Text;
+using Microsoft.VisualStudio.Text.Editor;
+using Microsoft.VisualStudio.Text.Tagging;
+using Microsoft.VisualStudio.Text.Editor.OptionsExtensionMethods;
+using System.Text.RegularExpressions;
 using System.Windows.Media.TextFormatting;
+using Microsoft.VisualStudio.Utilities;
+using System.ComponentModel.Composition;
+using Microsoft.VisualStudio.Text.Formatting;
 
 namespace HandyTools.Completion
 {
-	internal class CompletionTagger : ITagger<CompletionTag>
-	{
-		public event EventHandler<SnapshotSpanEventArgs> TagsChanged;
-
-		private StackPanel stackPanel_;
-
-		private ITextBuffer buffer_;
-		private ITextSnapshot snapshot_;
-		private IWpfTextView view_;
-
-		private IAdornmentLayer adornmentLayer_;
-
-		private Brush grayBrush_;
-		private Brush transparentBrush_;
-
-		private bool showSuggestion_;
-		private bool isTextInsertion_;
-
-		private int currentTextLineNumber_;
-		private int suggestionIndex_;
-		private int insertionPoint_;
-		private int userIndex_;
-		private string userEndingText_;
-		private static Tuple<string, string[]> suggestion = null;
-
-		public CompletionTagger(IWpfTextView view, ITextBuffer buffer)
-		{
-			this.stackPanel_ = new StackPanel();
-
-			this.buffer_ = buffer;
-			this.snapshot_ = buffer.CurrentSnapshot;
-			this.buffer_.Changed += OnBufferChanged;
-			this.view_ = view;
-			this.adornmentLayer_ = view.GetAdornmentLayer("HandyToolsAdornmentLayer");
-
-			this.view_.LayoutChanged += OnViewLayoutChanged;
-
-			this.grayBrush_ = new SolidColorBrush(Colors.Gray);
-			this.transparentBrush_ = new SolidColorBrush();
-			this.transparentBrush_.Opacity = 0;
-			this.view_.LostAggregateFocus += OnViewLostAggregateFocus;
-			this.view_.Caret.PositionChanged += OnViewCaretUpdate;
-		}
-
-		public void SetSuggestion(string newSuggestion, bool _, int caretPoint)
-		{
-			ClearSuggestion();
-
-			int lineN = GetCurrentTextLine();
-
-			if (lineN < 0) return;
-
-			string untrim = buffer_.CurrentSnapshot.GetLineFromLineNumber(lineN).GetText();
-			string line = untrim.TrimStart();
-			int offset = untrim.Length - line.Length;
-
-			caretPoint = Math.Max(0, caretPoint - offset);
-
-			string combineSuggestion = line + newSuggestion;
-			if (line.Length - caretPoint > 0)
-			{
-				string currentText = line.Substring(0, caretPoint);
-				combineSuggestion = currentText + newSuggestion;
-				userEndingText_ = line.Substring(caretPoint).TrimEnd();
-				var userIndex = newSuggestion.IndexOf(userEndingText_);
-				if (userIndex < 0)
-				{
-					return;
-				}
-				userIndex += currentText.Length;
-
-				this.userIndex_ = userIndex;
-				isTextInsertion_ = true;
-				insertionPoint_ = line.Length - caretPoint;
-			}
-			else
-			{
-				isTextInsertion_ = false;
-			}
-
-			suggestion = new Tuple<string, string[]>(combineSuggestion, combineSuggestion.Split('\n'));
-			Update();
-		}
-
-		private void OnViewCaretUpdate(object sender, CaretPositionChangedEventArgs e)
-		{
-			if (showSuggestion_ && GetCurrentTextLine() != currentTextLineNumber_)
-			{
-				ClearSuggestion();
-			}
-		}
-
-		private void OnViewLostAggregateFocus(object sender, EventArgs e)
-		{
-			ClearSuggestion();
-		}
-
-		public bool IsSuggestionActive()
-		{
-			return showSuggestion_;
-		}
-
-		public String GetSuggestion()
-		{
-			if (suggestion != null && showSuggestion_)
-			{
-				return suggestion.Item1;
-			}
-			else
-			{
-				return string.Empty;
-			}
-		}
-
-		private IntraGrayTextAdornmentTagger GetTagger()
-		{
-			Type key = typeof(IntraGrayTextAdornmentTagger);
-			Microsoft.VisualStudio.Utilities.PropertyCollection props = view_.TextBuffer.Properties;
-			if (props.ContainsProperty(key))
-			{
-				return props.GetProperty<IntraGrayTextAdornmentTagger>(key);
-			}
-			else
-			{
-				return null;
-			}
-		}
-
-		public IEnumerable<ITagSpan<CompletionTag>> GetTags(NormalizedSnapshotSpanCollection spans)
-		{
-			Tuple<string, string[]> currentSuggestion = suggestion;
-			if (!showSuggestion_ || currentSuggestion == null || currentSuggestion.Item2.Length <= 1)
-			{
-				yield break;
-			}
-
-			SnapshotSpan entire = new SnapshotSpan(spans[0].Start, spans[spans.Count - 1].End).TranslateTo(snapshot_, SpanTrackingMode.EdgeExclusive);
-			ITextSnapshot currentSnapshot = spans[0].Snapshot;
-
-			SnapshotSpan line = currentSnapshot.GetLineFromLineNumber(currentTextLineNumber_).Extent;
-			SnapshotSpan span = new SnapshotSpan(line.End, line.End);
-
-			ITextSnapshotLine snapshotLine = currentSnapshot.GetLineFromLineNumber(currentTextLineNumber_);
-
-			double height = view_.LineHeight * (currentSuggestion.Item2.Length - 1);
-
-			if (currentTextLineNumber_ == 0 && currentSnapshot.Lines.Count() == 1 && String.IsNullOrEmpty(currentSnapshot.GetText()))
-			{
-				height += view_.LineHeight;
-			}
-
-			yield return new TagSpan<CompletionTag>(span, new CompletionTag(0, 0, 0, 0, height, PositionAffinity.Predecessor, stackPanel_, this));
-		}
-
-		private void OnBufferChanged(object sender, TextContentChangedEventArgs e)
-		{
-			if (e.After != buffer_.CurrentSnapshot)
-			{
-				return;
-			}
-			Update();
-		}
-
-		private TextRunProperties GetTextFormat()
-		{
-			Microsoft.VisualStudio.Text.Formatting.IWpfTextViewLine line = view_.TextViewLines.FirstVisibleLine;
-			return line.GetCharacterFormatting(line.Start);
-		}
-
-		public void FormatText(TextBlock block)
-		{
-			var line = view_.TextViewLines.FirstVisibleLine;
-			var format = line.GetCharacterFormatting(line.Start);
-			if (format != null)
-			{
-				block.FontFamily = format.Typeface.FontFamily;
-				block.FontSize = format.FontRenderingEmSize;
-			}
-		}
-
-		private String ConvertTabsToSpaces(string text)
-		{
-			int tabSize = view_.Options.GetTabSize();
-			return Regex.Replace(text, "\t", new string(' ', tabSize));
-		}
-
-		private void FormatTextBlock(TextBlock textBlock)
-		{
-			textBlock.FontStyle = FontStyles.Normal;
-			textBlock.FontWeight = FontWeights.Normal;
-		}
-
-		private TextBlock CreateTextBox(string text, Brush textColour)
-		{
-			TextBlock textBlock = new TextBlock();
-			textBlock.Inlines.Add(item: new Run(text) { Foreground = textColour });
-			FormatTextBlock(textBlock);
-			return textBlock;
-		}
-
-		private void AddSuffixTextBlocks(int start, string line, string userText)
-		{
-			if (line.Length <= suggestionIndex_)
-				return;
-
-			int emptySpaceLength = userText.Length - userText.TrimStart().Length;
-			string emptySpace = ConvertTabsToSpaces(userText.Substring(0, emptySpaceLength));
-			string editedUserText = emptySpace + userText.TrimStart();
-			if (isTextInsertion_)
-			{
-				editedUserText = emptySpace + line.Substring(0, start);
-			}
-			string remainder = line.Substring(start);
-			TextBlock textBlock = new TextBlock();
-			textBlock.Inlines.Add(item: new Run(editedUserText) { Foreground = transparentBrush_ });
-			textBlock.Inlines.Add(item: new Run(remainder) { Foreground = grayBrush_ });
-
-			stackPanel_.Children.Add(textBlock);
-		}
-
-		private void AddInsertionTextBlock(int start, int end, string line)
-		{
-			if (line.Length <= suggestionIndex_)
-				return;
-
-			TextBlock textBlock = new TextBlock();
-			string remainder = line.Substring(start, end - start);
-			GetTagger().UpdateAdornment(CreateTextBox(remainder, grayBrush_));
-		}
-
-		public void UpdateAdornment(IWpfTextView view, string userText, int suggestionStart)
-		{
-			stackPanel_.Children.Clear();
-			GetTagger().ClearAdornment();
-			for (int i = suggestionStart; i < suggestion.Item2.Length; i++)
-			{
-				string line = suggestion.Item2[i];
-
-				if (i == 0)
-				{
-					int offset = line.Length - line.TrimStart().Length;
-
-					if (isTextInsertion_ && suggestionIndex_ < userIndex_)
-					{
-						if (0<suggestionIndex_ && char.IsWhiteSpace(line[suggestionIndex_ - 1]) && !char.IsWhiteSpace(userText[userText.Length - insertionPoint_ - 1]))
-						{
-							--suggestionIndex_;
-						}
-						AddInsertionTextBlock(suggestionIndex_ + offset, userIndex_, line);
-						if (userIndex_ + 1 < line.Length)
-						{
-							AddSuffixTextBlocks(userIndex_ + userEndingText_.Trim().Length, line, userText);
-						}
-					}
-					else
-					{
-						AddSuffixTextBlocks(userText.Length > 0 ? suggestionIndex_ + offset : 0, line, userText);
-					}
-				}
-				else
-				{
-					stackPanel_.Children.Add(CreateTextBox(line, grayBrush_));
-				}
-			}
-
-			adornmentLayer_.RemoveAllAdornments();
-
-			try
-			{
-				ITextSnapshotLine snapshotLine = view.TextSnapshot.GetLineFromLineNumber(currentTextLineNumber_);
-				Microsoft.VisualStudio.Text.Formatting.TextBounds start = view.TextViewLines.GetCharacterBounds(snapshotLine.Start);
-
-				Canvas.SetLeft(stackPanel_, start.Left);
-				Canvas.SetTop(stackPanel_, start.Top);
-				SnapshotSpan span = snapshotLine.Extent;
-				this.adornmentLayer_.AddAdornment(AdornmentPositioningBehavior.TextRelative, span, null, stackPanel_, null);
-
-			}
-			catch (ArgumentOutOfRangeException e)
-			{
-                _ = Log.OutputAsync(string.Format("{0}\n", e.ToString()));
-			}
-		}
-
-		private void OnViewLayoutChanged(object sender, EventArgs e)
-		{
-			if (!showSuggestion_)
-			{
-				return;
-			}
-
-			foreach (TextBlock block in stackPanel_.Children)
-			{
-				FormatText(block);
-			}
-
-			GetTagger().FormatText(GetTextFormat());
-			if (stackPanel_.Children.Count > 0)
-			{
-				adornmentLayer_.RemoveAllAdornments();
-
-				ITextSnapshotLine snapshotLine = view_.TextSnapshot.GetLineFromLineNumber(currentTextLineNumber_);
-				Microsoft.VisualStudio.Text.Formatting.TextBounds start = view_.TextViewLines.GetCharacterBounds(snapshotLine.Start);
-
-				SnapshotSpan span = snapshotLine.Extent;
-
-				Canvas.SetLeft(stackPanel_, start.Left);
-				Canvas.SetTop(element: stackPanel_, start.Top);
-
-				adornmentLayer_.AddAdornment(AdornmentPositioningBehavior.TextRelative, span, null, stackPanel_, null);
-			}
-		}
-
-		private int GetOccurrenceOfLetter(String s, char c)
-		{
-			int n = 0;
-			for (int i = 0; (i = s.IndexOf(c, i)) >= 0; ++i, ++n) { }
-			return n;
-		}
-
-		private int NextNonWhitespace(String s, int index)
-		{
-			for (; index < s.Length && Char.IsWhiteSpace(s[index]); ++index)
-			{
-			}
-			return index;
-		}
-
-		private bool IsNameChar(char c)
-		{
-			return Char.IsLetterOrDigit(c) || c == '_';
-		}
-
-		private Tuple<int, int> CompareStrings(String a, String b)
-		{
-			int a_index = 0, b_index = 0;
-			while (a_index < a.Length && b_index < b.Length)
-			{
-				char aChar = a[a_index];
-				char bChar = b[b_index];
-				if (aChar == bChar)
-				{
-					++a_index;
-					++b_index;
-				}
-				else
-				{
-					if (Char.IsWhiteSpace(bChar))
-					{
-						b_index = NextNonWhitespace(b, b_index);
-
-						continue;
-					}
-
-					if (Char.IsWhiteSpace(aChar) && (b_index >= 1 && !IsNameChar(b[b_index - 1])))
-					{
-						a_index = NextNonWhitespace(a, a_index);
-
-						continue;
-					}
-
-					break;
-				}
-			}
-
-			return new Tuple<int, int>(a_index, b_index);
-		}
-
-		private int CheckSuggestion(String suggestion, String line)
-		{
-			if (line.Length == 0)
-			{
-				return 0;
-			}
-
-			int index = suggestion.IndexOf(line);
-			int endPos = index + line.Length;
-			int firstLineBreak = suggestion.IndexOf('\n');
-
-			if (index > -1 && (firstLineBreak == -1 || endPos < firstLineBreak))
-			{
-				return index == 0 ? line.Length : -1;
-			}
-			else
-			{
-				Tuple<int, int> res = CompareStrings(line, suggestion);
-				int endPoint = isTextInsertion_ ? line.Length - insertionPoint_ : line.Length;
-				return res.Item1 >= endPoint ? res.Item2 : -1;
-			}
-		}
-
-		private int GetCurrentTextLine()
-		{
-			CaretPosition caretPosition = view_.Caret.Position;
-
-			var textPoint = caretPosition.Point.GetPoint(buffer_, caretPosition.Affinity);
-
-			if (!textPoint.HasValue)
-			{
-				return -1;
-			}
-
-			return buffer_.CurrentSnapshot.GetLineNumberFromPosition(textPoint.Value);
-		}
-
-		public void Update()
-		{
-
-			if (suggestion == null)
-			{
-				return;
-			}
-
-			int textLineN = GetCurrentTextLine();
-
-			if (textLineN < 0)
-			{
-				return;
-			}
-
-			ITextSnapshot newSnapshot = buffer_.CurrentSnapshot;
-			snapshot_ = newSnapshot;
-
-			string untrimLine = newSnapshot.GetLineFromLineNumber(textLineN).GetText();
-			string line = untrimLine.TrimStart();
-
-			int suggestionIndex = CheckSuggestion(suggestion.Item1, line);
-			if (0<=suggestionIndex)
-			{
-				currentTextLineNumber_ = textLineN;
-				suggestionIndex_ = suggestionIndex;
-				ShowSuggestion(untrimLine, 0);
-			}
-			else
-			{
-				ClearSuggestion();
-			}
-		}
-
-		public bool CompleteText()
-		{
-			int textLineN = GetCurrentTextLine();
-
-			if (textLineN < 0 || textLineN != currentTextLineNumber_)
-			{
-				return false;
-			}
-
-			string untrimLine = snapshot_.GetLineFromLineNumber(currentTextLineNumber_).GetText();
-			string line = untrimLine.Trim();
-
-			int suggestionLineNumber = CheckSuggestion(suggestion.Item1, line);
-			if (0<=suggestionLineNumber)
-			{
-				int diff = untrimLine.Length - untrimLine.TrimStart().Length;
-				string whitespace = string.IsNullOrWhiteSpace(untrimLine) ? string.Empty : untrimLine.Substring(0, diff);
-#if false
-				(string prefix, string suffix) = Commands.CodeUtil.GetNextCompletion(suggestion.Item1);
-				if (string.IsNullOrEmpty(prefix))
-				{
-					return true;
-				}
-				ReplaceText(whitespace + prefix, currentTextLineNumber_);
-				if (string.IsNullOrEmpty(suffix))
-				{
-					return true;
-				}
-				SetSuggestion(suffix, true, view_.Caret.Position.BufferPosition.Position);
-#else
-				ReplaceText(whitespace + suggestion.Item1, currentTextLineNumber_);
-				return true;
+
+    internal sealed class CompletionTagger : ITagger<CompletionTag>
+    {
+        public const string AunamentLayerName = "HandyToolsAdornmentLayer";
+
+        /// panel with multiline grey text
+        private StackPanel stackPanel_;
+
+        /// used to set the colour of the grey text
+        private Brush grayBrush_;
+
+        /// used to set the colour of text that overlaps with the users text
+        private Brush transparentBrush_;
+
+        /// contains the editor text and OnChange triggers on any text changes
+        ITextBuffer textBuffer_;
+
+        /// current editor display, immutable data
+        ITextSnapshot textSnapshot_;
+
+        /// the editor display object
+        IWpfTextView textView_;
+
+        /// contains the grey text
+        private IAdornmentLayer adornmentLayer_;
+
+        /// true if a suggestion should be shown
+        private bool showSuggestion_ = false;
+        private bool isTextInsertion_ = false;
+
+        ///  line number the suggestion should be displayed at
+        private int currentTextLineNumber_;
+        private int suggestionIndex_;
+        private int insertionPoint_;
+        private int userIndex_;
+        private String userEndingText_;
+        private String virtualText_ = "";
+
+        /// suggestion to display
+        /// first string is to match against second item: array is for formatting
+        private static Tuple<String, String[]> suggestion_ = null;
+
+        private InlineGrayTextTagger GetTagger()
+        {
+            Type key = typeof(InlineGrayTextTagger);
+            var props = textView_.TextBuffer.Properties;
+            if (props.ContainsProperty(key))
+            {
+                return props.GetProperty<InlineGrayTextTagger>(key);
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        public bool SetSuggestion(String newSuggestion, int caretPoint)
+        {
+            try
+            {
+                // If this isn't the most up-to-date version of the buffer, then ignore it for now (we'll
+                newSuggestion = newSuggestion.TrimEnd();
+                newSuggestion = newSuggestion.Replace("\r", "");
+                int lineNumber = GetCurrentTextLine();
+
+                if (lineNumber < 0)
+                {
+                    return false;
+                }
+                ClearSuggestion();
+
+                String untrim = textBuffer_.CurrentSnapshot.GetLineFromLineNumber(lineNumber).GetText();
+
+                virtualText_ = string.Empty;
+                if (String.IsNullOrWhiteSpace(untrim) && untrim.Length < caretPoint)
+                {
+                    virtualText_ = new string(' ', caretPoint - untrim.Length);
+                }
+                String line = untrim.TrimStart();
+                int offset = untrim.Length - line.Length;
+
+                caretPoint = Math.Max(0, caretPoint - offset);
+
+                String combineSuggestion = line + newSuggestion;
+                if (0 < line.Length - caretPoint)
+                {
+                    String currentText = line.Substring(0, caretPoint);
+                    combineSuggestion = currentText + newSuggestion;
+                    userEndingText_ = line.Substring(caretPoint).Trim();
+                    var userIndex = newSuggestion.IndexOf(userEndingText_);
+
+                    if (userIndex < 0) { return false; }
+                    userIndex += currentText.Length;
+
+                    this.userIndex_ = userIndex;
+                    isTextInsertion_ = true;
+                    insertionPoint_ = line.Length - caretPoint;
+                }
+                else
+                {
+                    isTextInsertion_ = false;
+                }
+                string[] suggestionLines = combineSuggestion.Split('\n');
+                suggestion_ = new Tuple<String, String[]>(combineSuggestion, suggestionLines);
+                return Update();
+            }
+            catch (Exception e)
+            {
+                Log.Output(e.Message);
+                return false;
+            }
+        }
+
+        public bool OnSameLine()
+        {
+            return GetCurrentTextLine() == currentTextLineNumber_;
+        }
+
+        private void LostFocus(object sender, EventArgs e)
+        {
+            try
+            {
+                ClearSuggestion();
+            }
+            catch (Exception exception)
+            {
+                Log.Output(exception.Message);
+            }
+        }
+
+        public CompletionTagger(IWpfTextView view, ITextBuffer buffer)
+        {
+            stackPanel_ = new StackPanel();
+
+            textBuffer_ = buffer;
+            textSnapshot_ = buffer.CurrentSnapshot;
+            view.TextBuffer.Changed += BufferChanged;
+            textView_ = view;
+            adornmentLayer_ = view.GetAdornmentLayer(CompletionTagger.AunamentLayerName);
+
+            textView_.LayoutChanged += this.OnSizeChanged;
+
+            transparentBrush_ = new SolidColorBrush();
+            transparentBrush_.Opacity = 0;
+            grayBrush_ = new SolidColorBrush(Colors.Gray);
+            view.LostAggregateFocus += LostFocus;
+        }
+
+        public bool IsSuggestionActive()
+        {
+            return showSuggestion_;
+        }
+
+        public String GetSuggestion()
+        {
+            if (suggestion_ != null && showSuggestion_)
+            {
+                return suggestion_.Item1;
+            }
+            else
+            {
+                return string.Empty;
+            }
+        }
+
+        // This an iterator that is used to iterate through all of the test tags
+        // tags are like html tags they mark places in the view to modify how those sections look
+        // Testtag is a tag that tells the editor to add empty space
+        public IEnumerable<ITagSpan<CompletionTag>> GetTags(NormalizedSnapshotSpanCollection spans)
+        {
+            var currentSuggestion = suggestion_;
+            if (!showSuggestion_ || currentSuggestion == null || currentSuggestion.Item2.Length <= 1)
+            {
+                yield break;
+            }
+
+            SnapshotSpan entire = new SnapshotSpan(spans[0].Start, spans[spans.Count - 1].End)
+                                      .TranslateTo(textSnapshot_, SpanTrackingMode.EdgeExclusive);
+            ITextSnapshot currentSnapshot = spans[0].Snapshot;
+
+            SnapshotSpan line = currentSnapshot.GetLineFromLineNumber(currentTextLineNumber_).Extent;
+            SnapshotSpan span = new SnapshotSpan(line.End, line.End);
+
+            ITextSnapshotLine snapshotLine = currentSnapshot.GetLineFromLineNumber(currentTextLineNumber_);
+
+            double height = textView_.LineHeight * (currentSuggestion.Item2.Length - 1);
+            double lineHeight = 0;
+
+            if (String.IsNullOrEmpty(line.GetText())) { lineHeight = textView_.LineHeight; }
+            yield return new TagSpan<CompletionTag>(
+                span,
+                new CompletionTag(
+                    0, 0, lineHeight, 0, height, PositionAffinity.Predecessor, stackPanel_, this));
+        }
+
+        public event EventHandler<SnapshotSpanEventArgs> TagsChanged;
+
+        // triggers when the editor text buffer changes
+        private void BufferChanged(object sender, TextContentChangedEventArgs e)
+        {
+            try
+            {
+                // If this isn't the most up-to-date version of the buffer, then ignore it for now (we'll
+                // eventually get another change event).
+                if (e.After != textBuffer_.CurrentSnapshot)
+                {
+                    return;
+                }
+                Update();
+            }
+            catch (Exception exception)
+            {
+                Log.Output(exception.Message);
+            }
+        }
+
+        private TextRunProperties GetTextFormat()
+        {
+            IWpfTextViewLine line = textView_.TextViewLines.FirstVisibleLine;
+            return line.GetCharacterFormatting(line.Start);
+        }
+
+        // used to set formatting of the displayed multi lines
+        public void FormatText(TextBlock block)
+        {
+            // var pos = snapshot.GetLineFromLineNumber(currentLineN).Start;
+
+            IWpfTextViewLine line = textView_.TextViewLines.FirstVisibleLine;
+            TextRunProperties format = line.GetCharacterFormatting(line.Start);
+            if (format != null)
+            {
+                block.FontFamily = format.Typeface.FontFamily;
+                block.FontSize = format.FontRenderingEmSize;
+            }
+        }
+
+        private String ConvertTabsToSpaces(string text)
+        {
+            int tabSize = textView_.Options.GetTabSize();
+            return Regex.Replace(text, "\t", new string(' ', tabSize));
+        }
+        private void FormatTextBlock(TextBlock textBlock)
+        {
+            textBlock.FontStyle = FontStyles.Normal;
+            textBlock.FontWeight = FontWeights.Normal;
+        }
+
+        TextBlock CreateTextBox(string text, Brush textColour)
+        {
+            TextBlock textBlock = new TextBlock();
+            textBlock.Inlines.Add(item: new Run(text) { Foreground = textColour });
+            FormatTextBlock(textBlock);
+            return textBlock;
+        }
+
+        void AddSuffixTextBlocks(int start, string line, string userText)
+        {
+            if (isTextInsertion_ && line.Length < start)
+            {
+                return;
+            }
+            int emptySpaceLength = userText.Length - userText.TrimStart().Length;
+            string emptySpace = ConvertTabsToSpaces(userText.Substring(0, emptySpaceLength));
+            string editedUserText = emptySpace + userText.TrimStart();
+            if (isTextInsertion_)
+            {
+                editedUserText = emptySpace + line.Substring(0, start);
+            }
+            string remainder = line.Substring(start);
+            TextBlock textBlock = new TextBlock();
+            textBlock.Inlines.Add(item: new Run(editedUserText) { Foreground = transparentBrush_ });
+            textBlock.Inlines.Add(item: new Run(remainder) { Foreground = grayBrush_ });
+
+            stackPanel_.Children.Add(textBlock);
+        }
+
+        void AddInsertionTextBlock(int start, int end, string line)
+        {
+            if (line.Length <= suggestionIndex_ || end < start)
+            {
+                return;
+            }
+            try
+            {
+                string remainder = line.Substring(start, end - start);
+                TextBlock textBlock = CreateTextBox(remainder, grayBrush_);
+                InlineGrayTextTagger inlineTagger = GetTagger();
+                if (inlineTagger == null)
+                {
+                    return;
+                }
+                inlineTagger.UpdateAdornment(textBlock);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return;
+            }
+        }
+
+        // Updates the grey text
+        public void UpdateAdornment(IWpfTextView view, string userText, int suggestionStart)
+        {
+            try
+            {
+                stackPanel_.Children.Clear();
+                InlineGrayTextTagger inlineTagger = GetTagger();
+                if (inlineTagger == null)
+                {
+                    return;
+                }
+                inlineTagger.ClearAdornment();
+                for (int i = suggestionStart; i < suggestion_.Item2.Length; ++i)
+                {
+                    string line = suggestion_.Item2[i];
+                    if (0 != i)
+                    {
+                        stackPanel_.Children.Add(CreateTextBox(line, grayBrush_));
+                        continue;
+                    }
+
+                    int offset = line.Length - line.TrimStart().Length;
+
+                    if (isTextInsertion_ && suggestionIndex_ < userIndex_)
+                    {
+                        if (suggestionIndex_ > 0 && suggestionIndex_ < line.Length && char.IsWhiteSpace(line[suggestionIndex_ - 1]) &&
+                            userText.Length > insertionPoint_ + 1 &&
+                            !char.IsWhiteSpace(userText[userText.Length - insertionPoint_ - 1]))
+                        {
+                            suggestionIndex_--;
+                        }
+                        AddInsertionTextBlock(suggestionIndex_ + offset, userIndex_, line);
+                        if (line.Length > userIndex_ + 1)
+                        {
+                            AddSuffixTextBlocks(
+                                userIndex_ + userEndingText_.Trim().Length, line, userText);
+                        }
+                        else
+                        {
+                            stackPanel_.Children.Add(CreateTextBox("", grayBrush_));
+                        }
+                    }
+                    else
+                    {
+                        if (String.IsNullOrEmpty(line))
+                        {
+                            stackPanel_.Children.Add(CreateTextBox("", grayBrush_));
+                        }
+                        else
+                        {
+                            String suggestedLine =
+                                virtualText_.Length > 0 ? virtualText_ + line.TrimStart() : line;
+                            AddSuffixTextBlocks(userText.Length > 0 ? suggestionIndex_ + offset : 0,
+                                                suggestedLine,
+                                                userText);
+                        }
+                    }
+                }
+
+                adornmentLayer_.RemoveAllAdornments();
+
+                // usually only happens the moment a bunch of text has rentered such as an undo operation
+                ITextSnapshotLine snapshotLine =
+                    view.TextSnapshot.GetLineFromLineNumber(currentTextLineNumber_);
+                Microsoft.VisualStudio.Text.Formatting.TextBounds start = view.TextViewLines.GetCharacterBounds(snapshotLine.Start);
+
+                // Place the image in the top left hand corner of the line
+                Canvas.SetLeft(stackPanel_, start.Left);
+                Canvas.SetTop(stackPanel_, start.TextTop);
+                SnapshotSpan span = snapshotLine.Extent;
+                // Add the image to the adornment layer and make it relative to the viewport
+                adornmentLayer_.AddAdornment(AdornmentPositioningBehavior.TextRelative, span, null, stackPanel_, null);
+            }
+            catch (Exception e)
+            {
+                Log.Output(e.Message);
+            }
+        }
+
+        // Adds grey text to display
+        private void OnSizeChanged(object sender, EventArgs e)
+        {
+
+            try
+            {
+                if (!showSuggestion_) {
+                    return;
+                }
+
+                foreach (TextBlock block in stackPanel_.Children)
+                {
+                    FormatText(block);
+                }
+
+                ITextSnapshotLine snapshotLine = textView_.TextSnapshot.GetLineFromLineNumber(currentTextLineNumber_);
+
+                Microsoft.VisualStudio.Text.Formatting.TextBounds start = textView_.TextViewLines.GetCharacterBounds(snapshotLine.Start);
+
+                InlineGrayTextTagger inlineTagger = GetTagger();
+                if (inlineTagger == null) {
+                    return;
+                }
+                inlineTagger.FormatText(GetTextFormat());
+
+                if (stackPanel_.Children.Count > 0)
+                {
+                    adornmentLayer_.RemoveAllAdornments();
+
+                    SnapshotSpan span = snapshotLine.Extent;
+
+                    // Place the image in the top left hand corner of the line
+                    Canvas.SetLeft(stackPanel_, start.Left);
+                    Canvas.SetTop(element: stackPanel_, start.TextTop);
+                    double diff = start.Top - start.TextTop;
+#if DEBUG
+                    Log.Output("Top = " + (start.Top.ToString()) +
+                                " TextTop = " + (start.TextTop.ToString()) + " bottom " +
+                                (start.TextBottom.ToString()));
 #endif
-			}
+                    // Add the image to the adornment layer and make it relative to the viewport
+                    adornmentLayer_.AddAdornment(AdornmentPositioningBehavior.TextRelative, span, null, stackPanel_, null);
+                }
+            }
+            catch (Exception exception)
+            {
+                Log.Output(exception.Message);
+            }
+        }
 
-			return false;
-		}
+        // Gets the line number of the caret
+        int GetCurrentTextLine()
+        {
+            CaretPosition caretPosition = textView_.Caret.Position;
+            SnapshotPoint? textPoint = caretPosition.Point.GetPoint(textBuffer_, caretPosition.Affinity);
+            if (!textPoint.HasValue) {
+                return -1;
+            }
+            return textBuffer_.CurrentSnapshot.GetLineNumberFromPosition(textPoint.Value);
+        }
 
-		void ReplaceText(string text, int lineN)
-		{
-			ClearSuggestion();
-			SnapshotSpan span = snapshot_.GetLineFromLineNumber(lineN).Extent;
-			ITextEdit edit = view_.BufferGraph.TopBuffer.CreateEdit();
-			int spanLength = span.Length;
-			edit.Replace(span, text);
-			edit.Apply();
+        // update multiline data
+        public bool Update()
+        {
 
-			if (spanLength == 0 && 0<text.Length)
-			{
-				//view_.Caret.MoveToPreviousCaretPosition();
-				view_.Caret.MoveToNextCaretPosition();
-			}
-		}
+            if (suggestion_ == null) {
+                return false;
+            }
 
-		void ShowSuggestion(String text, int suggestionLineStart)
-		{
-			UpdateAdornment(view_, text, suggestionLineStart);
-			showSuggestion_ = true;
-			MarkDirty();
-		}
+            int textLineNumber = GetCurrentTextLine();
 
-		public void ClearSuggestion()
-		{
-			if (!showSuggestion_)
-			{
-				return;
-			}
-			IntraGrayTextAdornmentTagger inlineTagger = GetTagger();
-			inlineTagger.ClearAdornment();
-			inlineTagger.MarkDirty();
-			suggestion = null;
-			adornmentLayer_.RemoveAllAdornments();
-			showSuggestion_ = false;
+            if (textLineNumber < 0) {
+                return false;
+            }
 
-			MarkDirty();
-		}
+            ITextSnapshot newSnapshot = textBuffer_.CurrentSnapshot;
+            this.textSnapshot_ = newSnapshot;
 
-		void MarkDirty()
-		{
-			GetTagger().MarkDirty();
-			ITextSnapshot newSnapshot = buffer_.CurrentSnapshot;
-			snapshot_ = newSnapshot;
+            String untrimLine = newSnapshot.GetLineFromLineNumber(textLineNumber).GetText();
+            String line = untrimLine.TrimStart();
 
-			if (view_.TextViewLines == null)
-			{
-				return;
-			}
+            // get line carat is on
+            // if suggestion matches line (possibly including preceding lines)
+            //   show suggestion
+            // else
+            //   clear suggestions
 
-			SnapshotPoint changeStart = view_.TextViewLines.FirstVisibleLine.Start;
-			SnapshotPoint changeEnd = view_.TextViewLines.LastVisibleLine.Start;
+            int newIndex = StringUtils.CheckSuggestion(suggestion_.Item1, line, isTextInsertion_, insertionPoint_);
+            if (newIndex >= 0)
+            {
+                this.currentTextLineNumber_ = textLineNumber;
+                this.suggestionIndex_ = newIndex;
+                ShowSuggestion(untrimLine, 0);
+                return true;
+            }
+            else
+            {
+                ClearSuggestion();
+            }
 
-			ITextSnapshotLine startLine = view_.TextSnapshot.GetLineFromPosition(changeStart);
-			ITextSnapshotLine endLine = view_.TextSnapshot.GetLineFromPosition(changeEnd);
+            return false;
+        }
 
-			SnapshotSpan span = new SnapshotSpan(startLine.Start, endLine.EndIncludingLineBreak).
-			TranslateTo(targetSnapshot: newSnapshot, SpanTrackingMode.EdgePositive);
+        // Adds the grey text to the file replacing current line in the process
+        public bool CompleteText()
+        {
+            try
+            {
+                if (!showSuggestion_ || suggestion_ == null)
+                {
+                    return false;
+                }
 
-			if (TagsChanged != null)
-			{
-				TagsChanged(this, new SnapshotSpanEventArgs(span));
-			}
-		}
-	}
+                String untrimLine = this.textSnapshot_.GetLineFromLineNumber(currentTextLineNumber_).GetText();
+                String line = untrimLine.Trim();
+
+                int suggestionLineNumber = StringUtils.CheckSuggestion(suggestion_.Item1, line, isTextInsertion_, insertionPoint_);
+                if (0<=suggestionLineNumber)
+                {
+                    int diff = untrimLine.Length - untrimLine.TrimStart().Length;
+                    string whitespace =
+                        String.IsNullOrWhiteSpace(untrimLine) ? "" : untrimLine.Substring(0, diff);
+                    ReplaceText(whitespace + suggestion_.Item1, currentTextLineNumber_);
+                    return true;
+                }
+
+            }
+            catch (Exception e)
+            {
+                Log.Output(e.Message);
+            }
+
+            return false;
+        }
+
+        // replaces text in the editor
+        void ReplaceText(string text, int lineNumber)
+        {
+            if (textView_.Options.GetOptionValue(DefaultOptions.NewLineCharacterOptionId) == "\r\n")
+            {
+                text = text.Replace("\n", "\r\n");
+            }
+            int oldLineNumber = lineNumber + suggestion_.Item2.Length - 1;
+            bool insertion = isTextInsertion_ && suggestion_.Item2.Length == 1;
+            int oldUserIndex = userIndex_;
+            int offset = text.Length - suggestion_.Item1.Length;
+            ClearSuggestion();
+            SnapshotSpan span = this.textSnapshot_.GetLineFromLineNumber(lineNumber).Extent;
+            ITextEdit edit = textView_.TextBuffer.CreateEdit();
+            int spanLength = span.Length;
+            edit.Replace(span, text);
+            ITextSnapshot newSnapshot = edit.Apply();
+
+            if (spanLength == 0 && 0<text.Length)
+            {
+                textView_.Caret.MoveTo(newSnapshot.GetLineFromLineNumber(oldLineNumber).End);
+            }
+
+            if (insertion)
+            {
+                textView_.Caret.MoveTo(newSnapshot.GetLineFromLineNumber(oldLineNumber).Start.Add(oldUserIndex + offset));
+            }
+        }
+
+        // sets up the suggestion for display
+        void ShowSuggestion(String text, int suggestionLineStart)
+        {
+            UpdateAdornment(textView_, text, suggestionLineStart);
+
+            showSuggestion_ = true;
+            MarkDirty();
+        }
+
+        // removes the suggestion
+        public void ClearSuggestion()
+        {
+            try
+            {
+                if (!showSuggestion_)
+                {
+                    return;
+                }
+                InlineGrayTextTagger inlineTagger = GetTagger();
+                if (inlineTagger == null) {
+                    return;
+                }
+                inlineTagger.ClearAdornment();
+                inlineTagger.MarkDirty();
+                suggestion_ = null;
+                adornmentLayer_.RemoveAllAdornments();
+                showSuggestion_ = false;
+
+                MarkDirty();
+
+            }
+            catch (Exception e)
+            {
+                Log.Output(e.Message);
+            }
+        }
+
+        // triggers refresh of the screen
+        void MarkDirty()
+        {
+            try
+            {
+                InlineGrayTextTagger inlineTagger = GetTagger();
+                if (inlineTagger == null) {
+                    return;
+                }
+                inlineTagger.MarkDirty();
+                ITextSnapshot newSnapshot = textBuffer_.CurrentSnapshot;
+                this.textSnapshot_ = newSnapshot;
+
+                if (textView_.TextViewLines == null)
+                {
+                    return;
+                }
+                if (!textView_.TextViewLines.IsValid)
+                {
+                    return;
+                }
+
+                SnapshotPoint changeStart = textView_.TextViewLines.FirstVisibleLine.Start;
+                SnapshotPoint changeEnd = textView_.TextViewLines.LastVisibleLine.Start;
+
+                ITextSnapshotLine startLine = textView_.TextSnapshot.GetLineFromPosition(changeStart);
+                ITextSnapshotLine endLine = textView_.TextSnapshot.GetLineFromPosition(changeEnd);
+
+                SnapshotSpan span = new SnapshotSpan(startLine.Start, endLine.EndIncludingLineBreak)
+                    .TranslateTo(targetSnapshot: newSnapshot, SpanTrackingMode.EdgePositive);
+
+                // lines we are marking dirty
+                // currently all of them for simplicity
+                if (this.TagsChanged != null) {
+                    TagsChanged(this, new SnapshotSpanEventArgs(span));
+                }
+            }
+            catch (Exception e) {
+                Log.Output(e.Message);
+            }
+        }
+    }
+
+    [Export(typeof(IViewTaggerProvider))]
+    [TagType(typeof(CompletionTag))]
+    [ContentType("text")]
+    internal sealed class SuggestionProvider : IViewTaggerProvider
+    {
+
+        [Export(typeof(AdornmentLayerDefinition))]
+        [Name(CompletionTagger.AunamentLayerName)]
+        [Order(After = PredefinedAdornmentLayers.Caret)]
+        private AdornmentLayerDefinition editorAdornmentLayer;
+
+        // create a single tagger for each buffer.
+        // the MultilineGreyTextTagger displays the grey text in the editor.
+        public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer)
+            where T : ITag
+        {
+            Func<ITagger<T>> sc = delegate ()
+            {
+                return new CompletionTagger((IWpfTextView)textView, buffer) as ITagger<T>;
+            };
+            return buffer.Properties.GetOrCreateSingletonProperty<ITagger<T>>(typeof(CompletionTagger), sc);
+        }
+    }
 }

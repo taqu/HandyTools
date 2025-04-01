@@ -57,12 +57,13 @@
     <Compile Include="Commands\CommandShowChatWindow.cs" />
     <Compile Include="Commands\CommandTranslateAndReplace.cs" />
     <Compile Include="Commands\CommandTranslation.cs" />
-    <Compile Include="Completion\AICompletionCommandHandler.cs" />
-    <Compile Include="Completion\AICompletionCommandHandlerProvider .cs" />
+    <Compile Include="Completion\CompletionModel.cs" />
+    <Compile Include="Completion\InlineGrayTextTagger.cs" />
+    <Compile Include="Completion\Language.cs" />
+    <Compile Include="Completion\StringUtils.cs" />
     <Compile Include="Completion\CompletionTag.cs" />
     <Compile Include="Completion\CompletionTagger.cs" />
-    <Compile Include="Completion\CompletionTaggerProvider.cs" />
-    <Compile Include="Completion\IntraGrayTextAdornmentTagger.cs" />
+    <Compile Include="Completion\TextViewListener.cs" />
     <Compile Include="DefaultPrompts.cs" />
     <Compile Include="Log.cs" />
     <Compile Include="Models\ModelOpenAI.cs" />
