@@ -25,7 +25,7 @@ namespace HandyTools.Completion
 
 internal class HandyToolsCompletionHandler : IOleCommandTarget, IDisposable
 {
-    private readonly HandyToolsPackage package_;
+    private HandyToolsPackage package_;
 
     private readonly ITextView textView_;
     private readonly IVsTextView vsTextView_;
@@ -55,10 +55,20 @@ internal class HandyToolsCompletionHandler : IOleCommandTarget, IDisposable
     {
         try
         {
-            if (textDocument_ == null || null == package_)
-            {
-                return;
-            }
+                if(null == textDocument_)
+                {
+                    return;
+                }
+                if(null == package_)
+                {
+                    await HandyToolsPackage.EnsurePackageLoadedAsync();
+                    package_ = await HandyToolsPackage.GetPackageAsync();
+					if (null == package_)
+                    {
+                        return;
+                    }
+
+				}
 
             UpdateRequestTokenSource(new CancellationTokenSource());
 
@@ -82,8 +92,10 @@ internal class HandyToolsCompletionHandler : IOleCommandTarget, IDisposable
                 Debug.Print("Error Caret past text position");
                 return;
             }
+				CompletionModel completionModel = await package_.GetCompletionModelAsync();
 
-            IList<Completion>? list = await package_.CompletionModel.GetCompletionsAsync(
+
+			IList<Completion>? list = await completionModel.GetCompletionsAsync(
                 textDocument_.FilePath,
                 text,
                 language_,
@@ -220,7 +232,6 @@ internal class HandyToolsCompletionHandler : IOleCommandTarget, IDisposable
                 {
                     continue;
                 }
-
                 if (command.Name.Contains(name) && command.Bindings is object[] bindings)
                 {
                     items.Add(command);
@@ -234,7 +245,7 @@ internal class HandyToolsCompletionHandler : IOleCommandTarget, IDisposable
         }
         catch (Exception e)
         {
-                Log.OutputAsync(e.Message);
+                await Log.OutputAsync(e.Message);
         }
 
         return null;
@@ -242,12 +253,17 @@ internal class HandyToolsCompletionHandler : IOleCommandTarget, IDisposable
 
     private void OnSuggestionAccepted(String proposalId)
     {
+            if(null == package_)
+            {
+                return;
+            }
         // unfortunately in the SDK version 17.5.33428.388, there are no
         // SuggestionAcceptedEventArgs so we have to use reflection here
         ThreadHelper.JoinableTaskFactory
             .RunAsync(async delegate {
                 await Log.OutputAsync($"Accepted completion {proposalId}");
-                await HandyToolsPackage.GetPackage().CompletionModel.AcceptCompletionAsync(proposalId);
+				CompletionModel completionModel = await package_.GetCompletionModelAsync();
+				await completionModel.AcceptCompletionAsync(proposalId);
             })
             .FireAndForget(true);
     }
@@ -283,6 +299,7 @@ internal class HandyToolsCompletionHandler : IOleCommandTarget, IDisposable
     {
         try
         {
+                HandyToolsPackage.EnsurePackageLoaded();
                 package_ = HandyToolsPackage.GetPackage();
             textView_ = view;
             provider_ = provider;
@@ -319,7 +336,7 @@ internal class HandyToolsCompletionHandler : IOleCommandTarget, IDisposable
             {
                 try
                 {
-                    completeSuggestionCommand_ = GetCommandsAsync("HandyToolsAcceptCompletion").Result;
+                    completeSuggestionCommand_ = GetCommandsAsync("HandyTools.AcceptCompletion").Result;
                 }
                 catch (Exception e)
                 {
@@ -330,7 +347,7 @@ internal class HandyToolsCompletionHandler : IOleCommandTarget, IDisposable
         }
         catch (Exception e)
         {
-                Log.OutputAsync(e.Message);
+                Log.Output(e.Message);
         }
     }
 
@@ -518,8 +535,7 @@ internal class HandyToolsCompletionHandler : IOleCommandTarget, IDisposable
         }
     }
 
-    public int Exec(ref Guid pguidCmdGroup, uint nCmdID, uint nCmdexecopt, IntPtr pvaIn,
-        IntPtr pvaOut)
+    public int Exec(ref Guid pguidCmdGroup, uint nCmdID, uint nCmdexecopt, IntPtr pvaIn, IntPtr pvaOut)
         {
         vsTextView_.RemoveCommandFilter(this);
         vsTextView_.AddCommandFilter(this, out nextCommandHandler_);

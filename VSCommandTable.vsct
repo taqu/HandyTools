@@ -86,6 +86,13 @@
 					<ButtonText>One Line Completion</ButtonText>
 				</Strings>
 			</Button>
+			<Button guid="HandyTools" id="CommandAcceptCompletion" priority="0x0007" type="Button">
+				<Icon guid="ImageCatalogGuid" id="Writeable" />
+				<CommandFlag>IconIsMoniker</CommandFlag>
+				<Strings>
+					<ButtonText>Accept Completion</ButtonText>
+				</Strings>
+			</Button>
 		</Buttons>
 	</Commands>
 
@@ -121,6 +128,9 @@
 		<CommandPlacement guid="HandyTools" id="CommandLineCompletion" priority="0x0006">
 			<Parent guid="HandyTools" id="HandyTools_CommandGroup" />
 		</CommandPlacement>
+		<CommandPlacement guid="HandyTools" id="CommandAcceptCompletion" priority="0x0007">
+			<Parent guid="HandyTools" id="HandyTools_CommandGroup" />
+		</CommandPlacement>
 
 		<CommandPlacement guid="HandyTools" id="HandyTools_ViewMenu" priority="0x0100">
 			<Parent guid="VSMainMenu" id="View.DevWindowsGroup.OtherWindows.Group1"/>
@@ -134,13 +144,14 @@
 	</CommandPlacements>
 
 	<KeyBindings>
-		<KeyBinding guid="HandyTools" id="CommandCompletion" key1="1" mod1="ALT" editor="guidVSStd97" />
-		<KeyBinding guid="HandyTools" id="CommandExplanation" key1="2" mod1="ALT" editor="guidVSStd97" />
-		<KeyBinding guid="HandyTools" id="CommandTranslation" key1="3" mod1="ALT" editor="guidVSStd97" />
-		<KeyBinding guid="HandyTools" id="CommandTranslateAndReplace" key1="4" mod1="ALT" editor="guidVSStd97" />
-		<KeyBinding guid="HandyTools" id="CommandAddDocument" key1="5" mod1="ALT" editor="guidVSStd97" />
-		<KeyBinding guid="HandyTools" id="CommandPreviewDocument" key1="6" mod1="ALT" editor="guidVSStd97" />
-		<KeyBinding guid="HandyTools" id="CommandLineCompletion" key1="0" mod1="ALT" editor="guidVSStd97" />
+		<KeyBinding guid="HandyTools" id="CommandCompletion" key1="VK_F1" mod1="ALT" editor="guidVSStd97" />
+		<KeyBinding guid="HandyTools" id="CommandExplanation" key1="VK_F2" mod1="ALT" editor="guidVSStd97" />
+		<KeyBinding guid="HandyTools" id="CommandTranslation" key1="VK_F3" mod1="ALT" editor="guidVSStd97" />
+		<KeyBinding guid="HandyTools" id="CommandTranslateAndReplace" key1="VK_F4" mod1="ALT" editor="guidVSStd97" />
+		<KeyBinding guid="HandyTools" id="CommandAddDocument" key1="VK_F5" mod1="ALT" editor="guidVSStd97" />
+		<KeyBinding guid="HandyTools" id="CommandPreviewDocument" key1="VK_F6" mod1="ALT" editor="guidVSStd97" />
+		<KeyBinding guid="HandyTools" id="CommandLineCompletion" key1="VK_F7" mod1="ALT" editor="guidVSStd97" />
+		<KeyBinding guid="HandyTools" id="CommandAcceptCompletion" key1="VK_TAB" mod1="ALT" editor="guidVSStd97" />
 	</KeyBindings>
 
 	<Symbols>
@@ -160,6 +171,7 @@
 			<IDSymbol name="CommandAddDocument" value="0x2005" />
 			<IDSymbol name="CommandPreviewDocument" value="0x2006" />
 			<IDSymbol name="CommandLineCompletion" value="0x2007" />
+			<IDSymbol name="CommandAcceptCompletion" value="0x2008" />
 		</GuidSymbol>
 	</Symbols>
 </CommandTable>

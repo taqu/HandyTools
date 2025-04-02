@@ -45,7 +45,8 @@ namespace HandyTools.Completion
 			}
 			ModelParams modelParams = new ModelParams(path)
 			{
-				ContextSize = 4096
+				ContextSize = 4096,
+				GpuLayerCount = 0,
 			};
 			try
 			{

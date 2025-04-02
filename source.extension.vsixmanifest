@@ -30,5 +30,10 @@
     <Assets>
         <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%|" />
         <Asset d:Source="File" Path="starcoderbase-1b.Q4_K_M.gguf" Type="Microsoft.VisualStudio.Analyzer" />
+        <Asset Type="Microsoft.VisualStudio.Analyzer" d:Source="File" Path="ggml-base.dll" />
+        <Asset Type="Microsoft.VisualStudio.Analyzer" d:Source="File" Path="ggml.dll" />
+        <Asset Type="Microsoft.VisualStudio.Analyzer" d:Source="File" Path="ggml-cpu.dll" />
+        <Asset Type="Microsoft.VisualStudio.Analyzer" d:Source="File" Path="llama.dll" />
+        <Asset Type="Microsoft.VisualStudio.Analyzer" d:Source="File" Path="llava_shared.dll" />
     </Assets>
 </PackageManifest>

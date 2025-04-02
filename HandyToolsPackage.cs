@@ -4,9 +4,11 @@ global using System;
 global using Task = System.Threading.Tasks.Task;
 using HandyTools.Completion;
 using HandyTools.Models;
+using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TextManager.Interop;
 using System.Collections.Generic;
+using System.IO.Packaging;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -106,7 +108,37 @@ namespace HandyTools
             return package;
         }
 
-        public static WeakReference<HandyToolsPackage> Package { get => package_; }
+		public static void EnsurePackageLoaded()
+		{
+			if(null != package_)
+			{
+				return;
+			}
+			ThreadHelper.JoinableTaskFactory.Run(EnsurePackageLoadedAsync);
+		}
+
+		public static async Task EnsurePackageLoadedAsync()
+		{
+			if(null != package_)
+			{
+				return;
+			}
+			await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+			IVsShell vsShell = (IVsShell)ServiceProvider.GlobalProvider.GetService(typeof(IVsShell)) ?? throw new NullReferenceException();
+			Guid guidPackage = new(PackageGuids.HandyToolsString);
+			if (vsShell.IsPackageLoaded(ref guidPackage, out var _) == VSConstants.S_OK)
+			{
+				return;
+			}
+
+			if (vsShell.LoadPackage(ref guidPackage, out var _) != VSConstants.S_OK)
+			{
+				throw new NullReferenceException();
+			}
+		}
+
+		public static WeakReference<HandyToolsPackage> Package { get => package_; }
+
 
         public EnvDTE80.DTE2 DTE { get { return dte2_; } }
 		public SVsRunningDocumentTable RDT { get { return runningDocumentTable_; } }
@@ -220,13 +252,21 @@ namespace HandyTools
 			return ToolkitPackage.GetGlobalService(typeof(SVsTextManager)) as IVsTextManager;
 		}
 
+		
 		public async Task<CompletionModel> GetCompletionModelAsync()
 		{
 			if(null != completionModel_)
 			{
 				return completionModel_;
 			}
-			completionModel_ = await CompletionModel.InitializeAsync();
+			try
+			{
+				completionModel_ = await CompletionModel.InitializeAsync();
+			}
+			catch(Exception e)
+			{
+				await Log.OutputAsync(e.Message);
+			}
 			return completionModel_;
 		}
 
