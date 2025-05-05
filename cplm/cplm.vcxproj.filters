@@ -1,0 +1,68 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="include">
+      <UniqueIdentifier>{25086719-dbce-48ea-95fa-d618b9921d02}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{c9b79900-f261-4fe8-9942-7064a5558bd2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\mimalloc">
+      <UniqueIdentifier>{1a007b63-1809-4e65-b044-3e992a0e6229}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\cplm.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\gguf.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\infer.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\model.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\utf8proc.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\mimalloc\mimalloc-new-delete.h">
+      <Filter>include\mimalloc</Filter>
+    </ClInclude>
+    <ClInclude Include="include\mimalloc\mimalloc-override.h">
+      <Filter>include\mimalloc</Filter>
+    </ClInclude>
+    <ClInclude Include="include\mimalloc\mimalloc.h">
+      <Filter>include\mimalloc</Filter>
+    </ClInclude>
+    <ClInclude Include="src\helpers.cuh">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="dllmain.h">
+      <Filter>include</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\cplm.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gguf.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\infer.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utf8proc.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="dllmain.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="src\infer.cu">
+      <Filter>src</Filter>
+    </CudaCompile>
+  </ItemGroup>
+</Project>

@@ -8,7 +8,6 @@ using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.TextManager.Interop;
 using System.Collections.Generic;
-using System.IO.Packaging;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;

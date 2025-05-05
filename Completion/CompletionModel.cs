@@ -1,21 +1,18 @@
-﻿using EnvDTE;
-using LLama;
-using LLama.Common;
-using Microsoft.VisualStudio.Language.Intellisense;
-using Microsoft.VisualStudio.Language.Intellisense.AsyncCompletion.Data;
-using Microsoft.VisualStudio.RpcContracts.Utilities;
+﻿using EnvDTE80;
+using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
+using System.IO;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace HandyTools.Completion
 {
-    public record struct Completion(
+	public record struct Completion(
         string id,
         string text,
         string stop,
@@ -29,10 +26,33 @@ namespace HandyTools.Completion
 		int endOffset
 		);
 
-    public class CompletionModel
+    public class CompletionModel : IDisposable
     {
-		public const string ModelName = "starcoderbase-1b.Q4_K_M.gguf";
-		private InteractiveExecutor executor_;
+		[DllImport("cplm.dll")]
+		static extern int get_int();
+
+		[DllImport("cplm.dll", CharSet = CharSet.Ansi)]
+		static extern unsafe IntPtr create_model(ulong size, byte* memory, int context);
+
+		[DllImport("cplm.dll", CharSet = CharSet.Ansi)]
+		static extern void destroy_model(IntPtr model);
+
+		[DllImport("cplm.dll", CharSet = CharSet.Ansi)]
+		static extern int generate_one(
+			IntPtr model,
+			int size,
+			StringBuilder generated,
+			string text,
+			int context,
+			ulong seed,
+			float temperature,
+			float minp,
+			int steps);
+
+		public const string ModelName = "qwen2.5-coder.calm";
+
+		private bool disposed_ = false;
+		private IntPtr model_ = IntPtr.Zero;
 
 		public static async Task<CompletionModel> InitializeAsync()
 		{
@@ -43,25 +63,37 @@ namespace HandyTools.Completion
 			{
 				return null;
 			}
-			ModelParams modelParams = new ModelParams(path)
-			{
-				ContextSize = 4096,
-				GpuLayerCount = 0,
-			};
 			try
 			{
-				LLamaWeights weights = await LLamaWeights.LoadFromFileAsync(modelParams);
-				InteractiveExecutor executor = new InteractiveExecutor(weights.CreateContext(modelParams));
-				return new CompletionModel(executor);
+				using (FileStream stream = fileInfo.OpenRead())
+				{
+					byte[] buffer = new byte[fileInfo.Length];
+					int size = await stream.ReadAsync(buffer, 0, buffer.Length);
+					if (size <= 0)
+					{
+						return null;
+					}
+					IntPtr ptr = IntPtr.Zero;
+					unsafe
+					{
+						fixed (byte* bytes = buffer)
+						{
+							ptr = create_model((ulong)buffer.LongLength, bytes, 4096);
+							if (ptr == IntPtr.Zero)
+							{
+								return null;
+							}
+						}
+					}
+					CompletionModel model = new CompletionModel();
+					model.model_ = ptr;
+					return model;
+				}
 			}
 			catch
 			{
 				return null;
 			}
-		}
-
-		private CompletionModel(InteractiveExecutor executor){
-			executor_ = executor;
 		}
 
 		public async Task<IList<Completion>?> GetCompletionsAsync(
@@ -119,5 +151,29 @@ namespace HandyTools.Completion
 
             //await RequestCommandAsync<AcceptCompletionResponse>("AcceptCompletion", data);
         }
-    }
+
+		public void Dispose()
+		{
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
+		protected virtual void Dispose(bool disposing)
+		{
+			if (!disposed_)
+			{
+				if(model_ != IntPtr.Zero)
+				{
+					destroy_model(model_);
+					model_ = IntPtr.Zero;
+				}
+				disposed_ = true;
+			}
+		}
+
+		~CompletionModel()
+		{
+			Dispose(false);
+		}
+	}
 }
