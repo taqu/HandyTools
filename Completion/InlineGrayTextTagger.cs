@@ -107,7 +107,7 @@ namespace HandyTools.Completion
 
     [Export(contractType: typeof(IViewTaggerProvider))]
     [TagType(typeof(IntraTextAdornmentTag))]
-    [ContentType("text")]
+    [ContentType("code")]
     internal class InlineTaggerProvider : IViewTaggerProvider
     {
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag

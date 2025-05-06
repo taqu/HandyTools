@@ -21,7 +21,7 @@ extern "C"
 #endif
     void* CPLM_STDCALL create_model(uint64_t size, void* memory, int32_t context)
     {
-        assert(nullptr == memory);
+        assert(nullptr != memory);
         cplm::Model* model = new cplm::Model();
         if(nullptr == model) {
             return nullptr;

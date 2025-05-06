@@ -28,11 +28,8 @@ namespace HandyTools.Completion
 
     public class CompletionModel : IDisposable
     {
-		[DllImport("cplm.dll")]
-		static extern int get_int();
-
 		[DllImport("cplm.dll", CharSet = CharSet.Ansi)]
-		static extern unsafe IntPtr create_model(ulong size, byte* memory, int context);
+		static extern unsafe IntPtr create_model(ulong size, IntPtr memory, int context);
 
 		[DllImport("cplm.dll", CharSet = CharSet.Ansi)]
 		static extern void destroy_model(IntPtr model);
@@ -44,15 +41,16 @@ namespace HandyTools.Completion
 			StringBuilder generated,
 			string text,
 			int context,
-			ulong seed,
-			float temperature,
-			float minp,
-			int steps);
+			ulong seed=0,
+			float temperature=1.0f,
+			float minp=0.1f,
+			int steps=256);
 
 		public const string ModelName = "qwen2.5-coder.calm";
 
 		private bool disposed_ = false;
 		private IntPtr model_ = IntPtr.Zero;
+		private StringBuilder buffer_ = new StringBuilder(4096);
 
 		public static async Task<CompletionModel> InitializeAsync()
 		{
@@ -78,7 +76,7 @@ namespace HandyTools.Completion
 					{
 						fixed (byte* bytes = buffer)
 						{
-							ptr = create_model((ulong)buffer.LongLength, bytes, 4096);
+							ptr = create_model((ulong)buffer.LongLength, (IntPtr)bytes, 4096);
 							if (ptr == IntPtr.Zero)
 							{
 								return null;
@@ -101,46 +99,54 @@ namespace HandyTools.Completion
 			int cursorPosition, string lineEnding, int tabSize, bool insertSpaces,
 			CancellationToken token)
 		{
-			//if (!_initializedWorkspace)
-			//{
-			//    await InitializeTrackedWorkspaceAsync();
-			//}
-			//var uri = new System.Uri(absolutePath);
-			//var absoluteUri = uri.AbsoluteUri;
-			//GetCompletionsRequest data =
-			//    new()
-			//    {
-			//        metadata = GetMetadata(),
-			//        document = new()
-			//        {
-			//            text = text,
-			//            editor_language = language.Name,
-			//            language = language.Type,
-			//            cursor_offset = (ulong)cursorPosition,
-			//            line_ending = lineEnding,
-			//            absolute_path = absolutePath,
-			//            absolute_uri = absoluteUri,
-			//            relative_path = Path.GetFileName(absolutePath)
-			//        },
-			//        editor_options = new()
-			//        {
-			//            tab_size = (ulong)tabSize,
-			//            insert_spaces = insertSpaces,
-			//            disable_autocomplete_in_comments =
-			//                    !_package.SettingsPage.EnableCommentCompletion,
-			//        }
-			//    };
+			if (null == model_)
+			{
+				return null;
+			}
+			if(language.language == Language.None)
+			{
+				return null;
+			}
+#if false
+			var uri = new System.Uri(absolutePath);
+			var absoluteUri = uri.AbsoluteUri;
+			GetCompletionsRequest data =
+				new()
+				{
+					metadata = GetMetadata(),
+					document = new()
+					{
+						text = text,
+						editor_language = language.Name,
+						language = language.Type,
+						cursor_offset = (ulong)cursorPosition,
+						line_ending = lineEnding,
+						absolute_path = absolutePath,
+						absolute_uri = absoluteUri,
+						relative_path = Path.GetFileName(absolutePath)
+					},
+					editor_options = new()
+					{
+						tab_size = (ulong)tabSize,
+						insert_spaces = insertSpaces,
+						disable_autocomplete_in_comments =
+								!_package.SettingsPage.EnableCommentCompletion,
+					}
+				};
 
-			//GetCompletionsResponse? result =
-			//    await RequestCommandAsync<GetCompletionsResponse>("GetCompletions", data, token);
-			//return result != null ? result.completionItems : [];
+			GetCompletionsResponse? result =
+				await RequestCommandAsync<GetCompletionsResponse>("GetCompletions", data, token);
+			return result != null ? result.completionItems : [];
+#endif
+			StringBuilder generated = new StringBuilder(4096);
+			int len = generate_one(model_, 4096, generated, text, 4096, 0, 1.0f, 0.1f, 256);
 			List<Completion> completions = new List<Completion>();
 			Completion completion = new Completion();
 			completion.id = Guid.NewGuid().ToString();
-			completion.text = "test";
-			completions.Add(completion);
+			completion.text = generated.ToString();
 			completion.startOffset = cursorPosition;
 			completion.endOffset = cursorPosition;
+			completions.Add(completion);
 			return completions;
         }
 

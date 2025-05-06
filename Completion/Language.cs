@@ -1,13 +1,15 @@
 ﻿
+using Microsoft.Build.Framework.XamlTypes;
 using Microsoft.VisualStudio.Utilities;
+using System.IO;
 
 namespace HandyTools.Completion
 {
     public enum Language
     {
+        None,
         Text,
-        C,
-        Cpp,
+        C_Cpp,
         CSharp,
     }
 
@@ -16,20 +18,29 @@ namespace HandyTools.Completion
     internal class SupportedLanguage
     {
         public static LanguageInfo[] LanguageInfos { get; } = [
-            new LanguageInfo("Plain Text", Language.Text),
-            new LanguageInfo("C", Language.C),
-            new LanguageInfo("C++", Language.Cpp),
+			new LanguageInfo("Unsupported", Language.None),
+			new LanguageInfo("Plain Text", Language.Text),
+            new LanguageInfo("C/C++", Language.C_Cpp),
             new LanguageInfo("C#", Language.CSharp),
         ];
 
         public static LanguageInfo GetLanguage(DocumentView documentView)
         {
-            return LanguageInfos[0];
+			return GetLanguage(documentView.TextBuffer.ContentType, Path.GetExtension(documentView.FilePath)?.Trim('.'));
         }
 
         public static LanguageInfo GetLanguage(IContentType contentType, string ext)
         {
-            return LanguageInfos[0];
+            switch (contentType.TypeName) {
+                case "Text":
+					return LanguageInfos[1];
+				case "C/C++":
+					return LanguageInfos[2];
+				case "CSharp":
+					return LanguageInfos[3];
+                default:
+                    return LanguageInfos[0];
+			}
         }
     }
 }

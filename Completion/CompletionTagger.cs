@@ -639,7 +639,7 @@ namespace HandyTools.Completion
 
     [Export(typeof(IViewTaggerProvider))]
     [TagType(typeof(CompletionTag))]
-    [ContentType("text")]
+    [ContentType("code")]
     internal sealed class SuggestionProvider : IViewTaggerProvider
     {
 

@@ -1,4 +1,4 @@
-using Microsoft.VisualStudio.Shell.Interop;
+﻿using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio;
 using System.Linq;
@@ -169,6 +169,10 @@ namespace HandyTools
                 return;
             }
 
+            if(null == charsetResult)
+            {
+                return;
+            }
             //Overwrite if needed
             bool write = false;
             if(0.5f <= charsetResult.Confidence) {
