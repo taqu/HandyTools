@@ -19,6 +19,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using EnvDTE80;
+using System.Runtime.CompilerServices;
+using System.Windows.Forms;
 
 namespace HandyTools.Completion
 {
@@ -36,6 +38,7 @@ namespace HandyTools.Completion
 		private LanguageInfo language_ = new LanguageInfo("Unsupported", Language.None);
 		private CancellationTokenSource? requestTokenSource_;
 		private readonly TimeSpan intelliSenseDelay_ = TimeSpan.FromMilliseconds(250.0);
+		private readonly TimeSpan idleSpan_ = TimeSpan.FromMilliseconds(1000.0);
 
 		private IOleCommandTarget nextCommandHandler_;
 		private TextViewListener provider_;
@@ -47,6 +50,7 @@ namespace HandyTools.Completion
 		private List<Tuple<String, String>> suggestions_;
 		private int suggestionIndex_;
 		private Command completeSuggestionCommand_;
+		private DateTime lastIdleStart_ = DateTime.Now;
 
 		[DllImport("user32.dll", CharSet = CharSet.Auto, ExactSpelling = true)]
 		public static extern short GetAsyncKeyState(Int32 keyCode);
@@ -55,10 +59,12 @@ namespace HandyTools.Completion
 		{
 			switch (language_.language)
 			{
-
+				case Language.None:
+					return;
 			}
 			try
 			{
+				lastIdleStart_ = DateTime.Now;
 				if (null == textDocument_)
 				{
 					return;
@@ -98,7 +104,6 @@ namespace HandyTools.Completion
 				}
 				CompletionModel completionModel = await package_.GetCompletionModelAsync();
 
-
 				IList<Completion>? list = await completionModel.GetCompletionsAsync(
 					textDocument_.FilePath,
 					text,
@@ -114,7 +119,6 @@ namespace HandyTools.Completion
 
 				int res = vsTextView_.GetCaretPos(out lineN, out characterN);
 				String line = textView_.TextBuffer.CurrentSnapshot.GetLineFromLineNumber(lineN).GetText();
-				await Log.OutputAsync("completions " + list.Count.ToString());
 
 				if (res != VSConstants.S_OK)
 				{
@@ -273,8 +277,8 @@ namespace HandyTools.Completion
 				.RunAsync(async delegate
 				{
 					await Log.OutputAsync($"Accepted completion {proposalId}");
-					CompletionModel completionModel = await package_.GetCompletionModelAsync();
-					await completionModel.AcceptCompletionAsync(proposalId);
+					//CompletionModel completionModel = await package_.GetCompletionModelAsync();
+					//await completionModel.AcceptCompletionAsync(proposalId);
 				})
 				.FireAndForget(true);
 		}
@@ -305,8 +309,7 @@ namespace HandyTools.Completion
 			return Encoding.UTF8.GetString(bytes.Take(utf8Offset).ToArray()).Length;
 		}
 
-		internal HandyToolsCompletionHandler(IVsTextView textViewAdapter, ITextView view,
-			TextViewListener provider)
+		internal HandyToolsCompletionHandler(IVsTextView textViewAdapter, ITextView view, TextViewListener provider)
 		{
 			try
 			{
@@ -314,6 +317,7 @@ namespace HandyTools.Completion
 				package_ = HandyToolsPackage.GetPackage();
 				textView_ = view;
 				provider_ = provider;
+				lastIdleStart_ = DateTime.Now;
 				var topBuffer = view.BufferGraph.TopBuffer;
 
 				var projectionBuffer = topBuffer as IProjectionBufferBase;
@@ -366,6 +370,7 @@ namespace HandyTools.Completion
 		{
 			try
 			{
+				lastIdleStart_ = DateTime.Now;
 				var tagger = GetTagger();
 				if (tagger == null)
 				{
@@ -483,8 +488,11 @@ namespace HandyTools.Completion
 
 		void ClearSuggestion()
 		{
-			var tagger = GetTagger();
-			if (tagger != null) { tagger.ClearSuggestion(); }
+			CompletionTagger tagger = GetTagger();
+			if (tagger != null) {
+				tagger.ClearSuggestion();
+			}
+			lastIdleStart_ = DateTime.Now;
 		}
 
 		// Used to detect when the user interacts with the intellisense popup
@@ -508,12 +516,22 @@ namespace HandyTools.Completion
 					break;
 			}
 		}
+
 		private CompletionTagger GetTagger()
 		{
-			var key = typeof(CompletionTagger);
-			var props = textView_.TextBuffer.Properties;
-			if (props.ContainsProperty(key)) { return props.GetProperty<CompletionTagger>(key); }
-			else { return null; }
+			Type key = typeof(CompletionTagger);
+			PropertyCollection props = textView_.TextBuffer.Properties;
+			if (props.ContainsProperty(key)) {
+				return props.GetProperty<CompletionTagger>(key);
+			} else {
+				return null;
+			}
+		}
+
+		private bool IsTaggerEnabled()
+		{
+			CompletionTagger tagger = GetTagger();
+			return null!=tagger && tagger.IsSuggestionActive();
 		}
 
 		public bool IsIntellicodeEnabled()
@@ -603,14 +621,24 @@ namespace HandyTools.Completion
 			}
 
 			// pass along the command so the char is added to the buffer
-			int retVal =
-				nextCommandHandler_.Exec(ref pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut);
+			int retVal = nextCommandHandler_.Exec(ref pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut);
 			bool handled = false;
 
-			if (hasCompletionUpdated_) { ClearSuggestion(); }
+			if (hasCompletionUpdated_) {
+				ClearSuggestion();
+			}
+			if(!regenerateSuggestion || !IsTaggerEnabled())
+			{
+				TimeSpan delta = DateTime.Now - lastIdleStart_;
+				if (idleSpan_ < delta)
+				{
+					regenerateSuggestion = true;
+				}
+			}
 			// gets lsp completions on added character or deletions
 			if (!typedChar.Equals(char.MinValue) || commandID == (uint)VSConstants.VSStd2KCmdID.RETURN || regenerateSuggestion)
 			{
+				lastIdleStart_ = DateTime.Now;
 				_ = Task.Run(() =>
 				{
 					try
@@ -643,7 +671,10 @@ namespace HandyTools.Completion
 				handled = true;
 			}
 
-			if (handled) return VSConstants.S_OK;
+			if (handled)
+			{
+				return VSConstants.S_OK;
+			}
 			return retVal;
 		}
 
