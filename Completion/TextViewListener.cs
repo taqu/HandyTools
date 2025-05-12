@@ -51,6 +51,7 @@ namespace HandyTools.Completion
 		private int suggestionIndex_;
 		private Command completeSuggestionCommand_;
 		private DateTime lastIdleStart_ = DateTime.Now;
+		private object completionLock_ = new object();
 
 		[DllImport("user32.dll", CharSet = CharSet.Auto, ExactSpelling = true)]
 		public static extern short GetAsyncKeyState(Int32 keyCode);
@@ -102,7 +103,11 @@ namespace HandyTools.Completion
 					Debug.Print("Error Caret past text position");
 					return;
 				}
-				CompletionModel completionModel = await package_.GetCompletionModelAsync();
+				CompletionModel completionModel = package_.GetCompletionModel();
+				if(null == completionModel)
+				{
+					return;
+				}
 
 				IList<Completion>? list = await completionModel.GetCompletionsAsync(
 					textDocument_.FilePath,
@@ -114,6 +119,7 @@ namespace HandyTools.Completion
 					textView_.Options.GetOptionValue(DefaultOptions.ConvertTabsToSpacesOptionId),
 					currentCancellTokenSource_.Token);
 
+				package_.SetCompletionModel(completionModel);
 				int lineN;
 				int characterN;
 

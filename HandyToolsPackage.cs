@@ -252,21 +252,54 @@ namespace HandyTools
 		}
 
 		
-		public async Task<CompletionModel> GetCompletionModelAsync()
+		public CompletionModel GetCompletionModel()
 		{
-			if(null != completionModel_)
+			lock (lockObject_)
 			{
-				return completionModel_;
+				CompletionModel completionModel = completionModel_;
+				completionModel_ = null;
+				return completionModel;
+			}
+		}
+
+		public void SetCompletionModel(CompletionModel completionModel)
+		{
+			lock (lockObject_)
+			{
+				if (null != completionModel)
+				{
+					completionModel_ = completionModel;
+				}
+			}
+		}
+
+		public async Task InitializeCompletionModelAsync()
+		{
+			lock (lockObject_)
+			{
+				if (null != completionModel_)
+				{
+					return;
+				}
 			}
 			try
 			{
-				completionModel_ = await CompletionModel.InitializeAsync();
+				CompletionModel completionModel = await CompletionModel.InitializeAsync();
+				lock (lockObject_)
+				{
+					if(null == completionModel_){
+						completionModel_ = completionModel;
+					}
+					else
+					{
+						completionModel.Dispose();
+					}
+				}
 			}
-			catch(Exception e)
+			catch (Exception e)
 			{
-				await Log.OutputAsync(e.Message);
+				Log.Output(e.Message);
 			}
-			return completionModel_;
 		}
 
 		static private WeakReference<HandyToolsPackage> package_;
@@ -310,6 +343,7 @@ namespace HandyTools
 				//projectItemsEvents_.ItemRemoved += OnProjectItemChanged;
 				//projectItemsEvents_.ItemRenamed += OnProjectItemRenamed;
 			}
+			await InitializeCompletionModelAsync();
 		}
 
 		//private void OnSolutionOpened()

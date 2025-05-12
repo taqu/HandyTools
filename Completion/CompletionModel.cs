@@ -69,6 +69,48 @@ namespace HandyTools.Completion
 		private IntPtr model_ = IntPtr.Zero;
 		private StringBuilder buffer_ = new StringBuilder(4096);
 
+		public static CompletionModel Initialize()
+		{
+			string path = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+			path = System.IO.Path.Combine(path, ModelName);
+			System.IO.FileInfo fileInfo = new System.IO.FileInfo(path);
+			if (!fileInfo.Exists)
+			{
+				return null;
+			}
+			try
+			{
+				using (FileStream stream = fileInfo.OpenRead())
+				{
+					byte[] buffer = new byte[fileInfo.Length];
+					int size = stream.Read(buffer, 0, buffer.Length);
+					if (size <= 0)
+					{
+						return null;
+					}
+					IntPtr ptr = IntPtr.Zero;
+					unsafe
+					{
+						fixed (byte* bytes = buffer)
+						{
+							ptr = create_model((ulong)buffer.LongLength, (IntPtr)bytes, 4096);
+							if (ptr == IntPtr.Zero)
+							{
+								return null;
+							}
+						}
+					}
+					CompletionModel model = new CompletionModel();
+					model.model_ = ptr;
+					return model;
+				}
+			}
+			catch
+			{
+				return null;
+			}
+		}
+
 		public static async Task<CompletionModel> InitializeAsync()
 		{
 			string path = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
