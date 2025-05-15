@@ -15,8 +15,12 @@ extern "C" {
 #endif
 CPLM_EXPORT void* CPLM_STDCALL create_model(uint64_t size, void* memory, int32_t context);
 CPLM_EXPORT void CPLM_STDCALL destroy_model(void* model);
+CPLM_EXPORT bool CPLM_STDCALL is_gpu(void* model);
+CPLM_EXPORT int32_t CPLM_STDCALL get_fim_prefix(void* model, int32_t size, uint8_t* str);
+CPLM_EXPORT int32_t CPLM_STDCALL get_fim_middle(void* model, int32_t size, uint8_t* str);
+CPLM_EXPORT int32_t CPLM_STDCALL get_fim_suffix(void* model, int32_t size, uint8_t* str);
 
-CPLM_EXPORT int32_t CPLM_STDCALL generate_one(
+CPLM_EXPORT void CPLM_STDCALL generate_one(
 	void* model,
 	int32_t size,
 	char* generated,

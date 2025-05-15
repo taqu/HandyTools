@@ -1,4 +1,4 @@
-#ifndef INC_CPLM_H_
+﻿#ifndef INC_CPLM_H_
 #define INC_CPLM_H_
 #include <cassert>
 #include <cstdint>
@@ -86,6 +86,13 @@ using u64 = uint64_t;
 
 using f32 = float;
 using f64 = double;
+
+void log_print(const char* format, ...);
+#ifdef _DEBUG
+#define CPLM_LOG_PRINT(format, ...) cplm::log_print(format, __VA_ARGS__)
+#else
+#define CPLM_LOG_PRINT(format, ...) (void)0
+#endif
 
 struct Random
 {
@@ -248,11 +255,11 @@ public:
 
     size_t num_metadata() const;
     const Metadata& get_metadata(size_t index) const;
-    const char* metadata_find(const char* name);
-    const char* metadata_get(const char* name);
-    int32_t metadata_get_int32(const char* name, int32_t defaultValue = 0);
-    int64_t metadata_get_int64(const char* name, int64_t defaultValue = 0);
-    float metadata_get_float(const char* name, float defaultValue = 0.0f);
+    const char* metadata_find(const char* name) const;
+    const char* metadata_get(const char* name) const;
+    int32_t metadata_get_int32(const char* name, int32_t defaultValue = 0) const;
+    int64_t metadata_get_int64(const char* name, int64_t defaultValue = 0) const;
+    float metadata_get_float(const char* name, float defaultValue = 0.0f) const;
 
 private:
     friend class Model;
@@ -393,6 +400,11 @@ public:
     bool open(const char* path, int32_t context);
     bool open(uint64_t size, const void* data, int32_t context);
     void close();
+
+    bool is_cuda() const
+    {
+        return cuda_;
+    }
 
     const Tensors& get_tensors() const
     {

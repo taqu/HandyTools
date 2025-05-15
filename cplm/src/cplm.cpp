@@ -1,4 +1,5 @@
 #include "cplm.h"
+#include <stdarg.h>
 #ifdef _WIN32
 #    include <Windows.h>
 #endif
@@ -142,6 +143,40 @@ extern "C" void free_cuda(void* device);
 
 namespace cplm
 {
+    void log_print(const char* format, ...)
+{
+        va_list ap;
+        va_start(ap, format);
+        static constexpr int32_t Size = 128;
+        char buffer[Size];
+        #ifdef _MSC_VER
+        int32_t len = _vscprintf(format, ap);
+        #else
+        int32_t len = vsnprintf(nullptr, Size-1, format, ap);
+        #endif
+        if(len<=0){
+            return;
+        }
+        char* buff = buffer;
+        if(Size<=len){
+            buff = (char*)CPLM_MALLOC(len+1);
+        }
+        #ifdef _MSC_VER
+        len = _vsnprintf_s(buff, len+1, len, format, ap);
+        #else
+        len = vsnprintf(buff, Size-1, format, ap);
+        #endif
+        buff[len] = '\0';
+        #ifdef _MSC_VER
+        OutputDebugStringA(buff);
+        #else
+        fputs(buff, stderr);
+        #endif
+        if(Size<=len){
+            CPLM_FREE(buff);
+        }
+}
+
 namespace
 {
     char* json_skipws(char* json)
@@ -922,7 +957,7 @@ const Metadata& Tensors::get_metadata(size_t index) const
     return metadata_[index];
 }
 
-const char* Tensors::metadata_find(const char* name)
+const char* Tensors::metadata_find(const char* name) const
 {
     assert(nullptr != name);
     for(size_t i = 0; i < metadata_.size(); ++i) {
@@ -933,7 +968,7 @@ const char* Tensors::metadata_find(const char* name)
     return nullptr;
 }
 
-const char* Tensors::metadata_get(const char* name)
+const char* Tensors::metadata_get(const char* name) const
 {
     const char* res = metadata_find(name);
     if(nullptr == res) {
@@ -942,7 +977,7 @@ const char* Tensors::metadata_get(const char* name)
     return res;
 }
 
-int32_t Tensors::metadata_get_int32(const char* name, int32_t defaultValue)
+int32_t Tensors::metadata_get_int32(const char* name, int32_t defaultValue) const
 {
     const char* str = metadata_get(name);
     if(nullptr == str) {
@@ -953,7 +988,7 @@ int32_t Tensors::metadata_get_int32(const char* name, int32_t defaultValue)
     return end != name ? x : defaultValue;
 }
 
-int64_t Tensors::metadata_get_int64(const char* name, int64_t defaultValue)
+int64_t Tensors::metadata_get_int64(const char* name, int64_t defaultValue) const
 {
     const char* str = metadata_get(name);
     if(nullptr == str) {
@@ -964,7 +999,7 @@ int64_t Tensors::metadata_get_int64(const char* name, int64_t defaultValue)
     return end != name ? x : defaultValue;
 }
 
-float Tensors::metadata_get_float(const char* name, float defaultValue)
+float Tensors::metadata_get_float(const char* name, float defaultValue) const
 {
     const char* str = metadata_get(name);
     if(nullptr == str) {
@@ -1479,6 +1514,7 @@ std::vector<Result> Model::generate(const char8_t* prompt, const Params& params)
 Result Model::generate_one(const char8_t* prompt, const Params& params)
 {
     assert(nullptr != prompt);
+    CPLM_LOG_PRINT("prompt: %s\n", (const char*)prompt);
 
     sampler_.initialize(transformer_.config_.vocab_size_, params.seed_, params.temperature_, params.minp_);
     Result result = {};

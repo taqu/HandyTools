@@ -45,9 +45,9 @@ namespace HandyTools.Completion
 		private CancellationTokenSource currentCancellTokenSource_;
 		private CancellationToken currentCancellToken_;
 
-		private string currentCompletionID_;
+		private Guid currentCompletionID_;
 		private bool hasCompletionUpdated_;
-		private List<Tuple<String, String>> suggestions_;
+		private List<Tuple<String, Guid>> suggestions_;
 		private int suggestionIndex_;
 		private Command completeSuggestionCommand_;
 		private DateTime lastIdleStart_ = DateTime.Now;
@@ -157,7 +157,7 @@ namespace HandyTools.Completion
 			}
 		}
 
-		List<Tuple<String, String>> ParseCompletion(IList<Completion> completionItems,
+		List<Tuple<String, Guid>> ParseCompletion(IList<Completion> completionItems,
 													string text, string line, string prefix,
 													int cursorPoint)
 		{
@@ -166,7 +166,7 @@ namespace HandyTools.Completion
 				return null;
 			}
 
-			List<Tuple<String, String>> list = new List<Tuple<String, String>>(completionItems.Count);
+			List<Tuple<String, Guid>> list = new List<Tuple<String, Guid>>(completionItems.Count);
 			for (int i = 0; i < completionItems.Count; ++i)
 			{
 				Completion completion = completionItems[i];
@@ -206,7 +206,7 @@ namespace HandyTools.Completion
 				}
 
 				completionText = completionText.Substring(offset);
-				var set = new Tuple<String, String>(completionText, completion.id);
+				var set = new Tuple<String, Guid>(completionText, completion.id);
 
 				// Filter out completions that don't match the current intellisense prefix
 				ICompletionSession session = provider_.CompletionBroker.GetSessions(textView_).FirstOrDefault();
@@ -271,7 +271,7 @@ namespace HandyTools.Completion
 			return null;
 		}
 
-		private void OnSuggestionAccepted(String proposalId)
+		private void OnSuggestionAccepted(Guid proposalId)
 		{
 			if (null == package_)
 			{

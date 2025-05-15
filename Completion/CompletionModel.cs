@@ -14,15 +14,8 @@ using System.Threading.Tasks;
 namespace HandyTools.Completion
 {
 	public record struct Completion(
-        string id,
+        Guid id,
         string text,
-        string stop,
-        double score,
-        ulong[] tokens,
-        List<string> decodedTokens,
-        double[] probabilities,
-        double[] adjustedProbabilities,
-        ulong generatedLength,
 		int startOffset,
 		int endOffset
 		);
@@ -44,8 +37,17 @@ namespace HandyTools.Completion
 		[DllImport("cplm.dll", CharSet = CharSet.Ansi)]
 		static extern void destroy_model(IntPtr model);
 
+		[DllImport("cplm.dll")]
+		static extern bool is_gpu(IntPtr model);
+		[DllImport("cplm.dll")]
+		static extern int get_fim_prefix(IntPtr model, int size, byte[] str);
+		[DllImport("cplm.dll")]
+		static extern int get_fim_middle(IntPtr model, int size, byte[] str);
+		[DllImport("cplm.dll")]
+		static extern int get_fim_suffix(IntPtr model, int size, byte[] str);
+
 		[DllImport("cplm.dll", CharSet = CharSet.Ansi)]
-		static extern int generate_one(
+		static extern void generate_one(
 			IntPtr model,
 			int size,
 			StringBuilder generated,
@@ -59,10 +61,14 @@ namespace HandyTools.Completion
 #if false
 		public const int MaxQuery = 3072;
 		public const int MaxResponse = 4096;
-#else
+#elif false
 		public const int MaxQuery = 1024;
 		public const int MaxResponse = 2048;
+#else
+		public const int MaxQuery = 256;
+		public const int MaxResponse = 512;
 #endif
+		public const int MaxWords = 4;
 		public const string ModelName = "qwen2.5-coder.calm";
 
 		private bool disposed_ = false;
@@ -200,23 +206,25 @@ namespace HandyTools.Completion
 			string query = createQuery(text, cursorPosition, 0.5f, MaxQuery);
 
 			StringBuilder generated = new StringBuilder(MaxResponse);
-			int len = generate_one(model_, MaxResponse, generated, query, MaxResponse, 0, 1.0f, 0.1f, MaxResponse);
+			generate_one(model_, MaxResponse, generated, query, MaxResponse, 0, 1.0f, 0.1f, MaxResponse);
 			List<Completion> completions = new List<Completion>();
-			string suggestion = getSuffix(generated);
-			if (0 < len && !string.IsNullOrEmpty(suggestion))
+			getSuggestion(completions, generated, MaxWords);
+#if false
+			if (!string.IsNullOrEmpty(suggestion))
 			{
 				Completion completion = new Completion();
-				completion.id = Guid.NewGuid().ToString();
+				completion.id = Guid.NewGuid();
 				completion.text = suggestion;
 				completion.startOffset = cursorPosition;
-				completion.endOffset = cursorPosition;
+				completion.endOffset = cursorPosition + suggestion.Length;
 				completions.Add(completion);
 			}
+#endif
 			return completions;
         }
-		public const string Prefix = "<|fim_prefix|>";
-		public const string Suffix = "<|fim_suffix|>";
-		public const string Middle = "<|fim_middle|>";
+		public static string Prefix = "<|fim_prefix|>";
+		public static string Suffix = "<|fim_suffix|>";
+		public static string Middle = "<|fim_middle|>";
 
 		private string createQuery(string text, int cursorPosition, float prefix_rate, int max_length)
 		{
@@ -265,17 +273,17 @@ namespace HandyTools.Completion
 			return text;
 		}
 
-		private string getSuffix(StringBuilder buffer)
+		private void getSuggestion(List<Completion> completions, StringBuilder buffer, int max_words)
 		{
-			string t = buffer.ToString();
-			int suffix_start = -1;
-			for (int i = buffer.Length-1; 0 <= i; --i)
+			int middle_start = -1;
+			for (int i = buffer.Length - 1; 0 <= i; --i)
 			{
-				if('<' == buffer[i] && i<=(buffer.Length- Middle.Length)){
+				if ('<' == buffer[i] && i <= (buffer.Length - Middle.Length))
+				{
 					bool found = true;
-					for(int j=1; j< Middle.Length; ++j)
+					for (int j = 1; j < Middle.Length; ++j)
 					{
-						if(Middle[j] != buffer[i + j])
+						if (Middle[j] != buffer[i + j])
 						{
 							found = false;
 							break;
@@ -285,19 +293,37 @@ namespace HandyTools.Completion
 					{
 						continue;
 					}
-					suffix_start = i+ Middle.Length;
+					middle_start = i + Middle.Length;
 					break;
 				}
 			}
-			if (0 <= suffix_start)
+			if(0<=middle_start)
 			{
-				return buffer.ToString(suffix_start, buffer.Length-suffix_start);
-			}
-			else
-			{
-				return string.Empty;
+				string str = buffer.ToString(middle_start, buffer.Length - middle_start);
+				splitWords(completions, str, middle_start, max_words);
+				Log.Output(completions.ToString());
 			}
 		}
+
+		private void splitWords(List<Completion> completions, string str, int position, int max_words)
+		{
+			string[] words = str.Split(' ', '\n', '\r', '\t', '\b');
+			for (int i = 0; i < words.Length && i<=max_words; ++i)
+			{
+				if(string.IsNullOrEmpty(words[i]))
+				{
+					continue;
+				}
+				Completion completion = new Completion();
+				completion.id = Guid.NewGuid();
+				completion.text = words[i];
+				completion.startOffset = position;
+				completion.endOffset = position + words[i].Length;
+				position += words[i].Length;
+				completions.Add(completion);
+			}
+		}
+
 
 		//public async Task AcceptCompletionAsync(string completionId)
 		//      {
