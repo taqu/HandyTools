@@ -8,6 +8,7 @@
 #include <mimalloc.h>
 #include <vector>
 #include <string>
+#include <sstream>
 #include <initializer_list>
 #include "model.h"
 
@@ -318,6 +319,7 @@ public:
     std::u8string decode(int32_t size, const int32_t* tokens) const;
     std::vector<int32_t> encode(const char8_t* text, uint32_t flags) const;
     int32_t find(const char8_t* token) const;
+    int32_t find_id(const char8_t* token) const;
 private:
     Tokenizer(const Tokenizer&) = delete;
     Tokenizer& operator=(const Tokenizer&) = delete;
@@ -340,6 +342,7 @@ private:
     int32_t eot_id_;
     int32_t byte_fallbacks_;
     char byte_pieces_[256][2];
+    mutable std::basic_ostringstream<char8_t> ss_;
 };
 
 //--- Sampler
@@ -394,6 +397,8 @@ public:
         float minp_ = 0.1f;
         int32_t steps_ = 256;
         int32_t sequences_ = 1;
+        int32_t stop0_ = -1;
+        int32_t stop1_ = -1;
     };
     Model();
     ~Model();
@@ -439,6 +444,7 @@ private:
     ::Transformer transformer_;
     Tokenizer tokenizer_;
     Sampler sampler_;
+    std::basic_ostringstream<char8_t> ss_;
 };
 } // namespace cplm
 #endif // INC_CPLM_H_

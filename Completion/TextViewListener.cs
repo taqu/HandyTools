@@ -93,7 +93,7 @@ namespace HandyTools.Completion
 
 				var caretPosition = caretPoint.Value.Position;
 
-				string text = textDocument_.TextBuffer.CurrentSnapshot.GetText();
+				ITextSnapshot text = textDocument_.TextBuffer.CurrentSnapshot;
 				int cursorPosition = textDocument_.Encoding.IsSingleByte
 					? caretPosition
 					: Utf16OffsetToUtf8Offset(text, caretPosition);
@@ -158,7 +158,8 @@ namespace HandyTools.Completion
 		}
 
 		List<Tuple<String, Guid>> ParseCompletion(IList<Completion> completionItems,
-													string text, string line, string prefix,
+													ITextSnapshot text,
+													string line, string prefix,
 													int cursorPoint)
 		{
 			if (completionItems == null || completionItems.Count <= 0)
@@ -186,7 +187,7 @@ namespace HandyTools.Completion
 				{
 					endOffset = text.Length;
 				}
-				string end = text.Substring(endOffset);
+				string end = text.GetText(0, endOffset);
 				String completionText = completion.text;
 				if (!String.IsNullOrEmpty(end))
 				{
@@ -312,7 +313,32 @@ namespace HandyTools.Completion
 		public static int Utf8OffsetToUtf16Offset(string str, int utf8Offset)
 		{
 			byte[] bytes = Encoding.UTF8.GetBytes(str);
-			return Encoding.UTF8.GetString(bytes.Take(utf8Offset).ToArray()).Length;
+			return Encoding.UTF8.GetString(bytes, 0, utf8Offset).Length;
+		}
+
+		public static int Utf16OffsetToUtf8Offset(ITextSnapshot text, int utf16Offset)
+		{
+			char[] c = new char[1];
+			int offset = 0;
+			for (int i=0; i<text.Length && i< utf16Offset; ++i)
+			{
+				c[0] = text[i];
+				offset += Encoding.UTF8.GetByteCount(c);
+			}
+			return offset;
+		}
+
+		public static int Utf8OffsetToUtf16Offset(ITextSnapshot text, int utf8Offset)
+		{
+			int offset = 0;
+			char[] c = new char[1];
+			int i = 0;
+			for (; i< text.Length && offset<utf8Offset; ++i)
+			{
+				c[0] = text[i];
+				offset += Encoding.UTF8.GetByteCount(c);
+			}
+			return i;
 		}
 
 		internal HandyToolsCompletionHandler(IVsTextView textViewAdapter, ITextView view, TextViewListener provider)

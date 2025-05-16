@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="dllmain.h" />
+    <ClInclude Include="include\converter.h" />
     <ClInclude Include="include\cplm.h" />
     <ClInclude Include="include\gguf.h" />
     <ClInclude Include="include\infer.h" />
@@ -24,6 +25,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="src\converter.c" />
     <ClCompile Include="src\cplm.cpp" />
     <ClCompile Include="src\gguf.cpp" />
     <ClCompile Include="src\infer.cpp" />

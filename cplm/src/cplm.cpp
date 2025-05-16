@@ -1,11 +1,10 @@
-#include "cplm.h"
+﻿#include "cplm.h"
 #include <stdarg.h>
 #ifdef _WIN32
 #    include <Windows.h>
 #endif
 #include <algorithm>
 #include <limits>
-#include <sstream>
 
 #include <cuda.h>
 
@@ -1108,19 +1107,19 @@ const char8_t* Tokenizer::decode(int32_t prev_token, int32_t token) const
 
 std::u8string Tokenizer::decode(int32_t size, const int32_t* tokens) const
 {
-    std::basic_stringstream<char8_t> ss;
+    ss_.str(u8"");
     if(size <= 0) {
-        return ss.str();
+        return ss_.str();
     }
     int32_t prev = tokens[0];
     int32_t next = tokens[0];
     for(int32_t i = 0; i < size; ++i) {
         next = tokens[i];
         const char8_t* piece = decode(prev, next);
-        ss << piece;
+        ss_ << piece;
         prev = next;
     }
-    return ss.str();
+    return ss_.str();
 }
 
 std::vector<int32_t> Tokenizer::encode(const char8_t* text, uint32_t flags) const
@@ -1222,6 +1221,15 @@ std::vector<int32_t> Tokenizer::encode(const char8_t* text, uint32_t flags) cons
 int32_t Tokenizer::find(const char8_t* token) const
 {
     return str_lookup((const char*)token, sorted_vocab_, vocab_size_);
+}
+
+int32_t Tokenizer::find_id(const char8_t* token) const
+{
+    int32_t index = find(token);
+    if(index<0){
+        return -1;
+    }
+    return sorted_vocab_[index].id_;
 }
 
 void Tokenizer::heap_swap(struct Merge* heap, int32_t i, int32_t j)
@@ -1532,17 +1540,20 @@ Result Model::generate_one(const char8_t* prompt, const Params& params)
     int32_t next;                     // will store the next token in the sequence
     int32_t token = prompt_tokens[0]; // kick off with the first token in the prompt
     int32_t pos = 0;                  // position in the sequence
-    std::basic_ostringstream<char8_t> ss;
+    ss_.str(u8"");
+    #if 0
     // print first prompt token since it won't be decoded
     if(token != tokenizer_.bos_id_) {
         const char8_t* piece = tokenizer_.decode(tokenizer_.bos_id_, token);
-        ss << piece;
+        ss_ << piece;
     }
+    #endif
 
     Timer timer;
     timer.start();
     float* logits_last = nullptr;
-    while(pos < params.steps_ || params.steps_ < 0) {
+    int32_t context = 0;
+    while(pos < params.steps_ || params.steps_ < 0 ) {
         // forward the transformer to get logits for the next token
         unsigned flags = pos < num_prompt_tokens - 1 ? FF_UPDATE_KV_ONLY : 0;
         float* logits = transformer_.forward_(&transformer_, token, pos, flags);
@@ -1568,8 +1579,17 @@ Result Model::generate_one(const char8_t* prompt, const Params& params)
         pos++;
 
         // print the token as string, decode it with the Tokenizer object
-        const char8_t* piece = tokenizer_.decode(token, next);
-        ss << piece;
+        if(num_prompt_tokens < pos) {
+            if(params.stop0_ == next || params.stop1_ == next){
+                break;
+            }
+            ++context;
+            const char8_t* piece = tokenizer_.decode(token, next);
+            ss_ << piece;
+            if(params.context_<=context){
+                break;
+            }
+        }
         token = next;
     }
 
@@ -1589,7 +1609,7 @@ Result Model::generate_one(const char8_t* prompt, const Params& params)
     //         ((double)read_bytes / 1e9) / ((double)(end - start) / 1000),
     //         (double)(end - start) / 1000, logits_hash);
 
-    result.text_ = ss.str();
+    result.text_ = ss_.str();
     result.num_tokens_ = pos;
     result.duration_ = timer.milliseconds();
     result.read_bytes_ = read_bytes;
