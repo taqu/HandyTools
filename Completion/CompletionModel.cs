@@ -16,8 +16,8 @@ using System.Threading.Tasks;
 namespace HandyTools.Completion
 {
 	public record struct Completion(
-        Guid id,
-        string text,
+		Guid id,
+		string text,
 		int startOffset,
 		int endOffset
 		);
@@ -32,7 +32,7 @@ namespace HandyTools.Completion
 	}
 
 	public class CompletionModel : IDisposable
-    {
+	{
 		[DllImport("cplm.dll")]
 		static extern unsafe IntPtr create_model(ulong size, IntPtr memory, int context);
 
@@ -58,11 +58,11 @@ namespace HandyTools.Completion
 			uint size,
 			string text,
 			int context,
-			ulong seed=0,
-			float temperature=1.0f,
-			float minp=0.1f,
-			int steps=4096,
-			int stop_token=-1);
+			ulong seed = 0,
+			float temperature = 1.0f,
+			float minp = 0.1f,
+			int steps = 4096,
+			int stop_token = -1);
 
 #if false
 		public const int MaxQuery = 3072;
@@ -75,7 +75,7 @@ namespace HandyTools.Completion
 #else
 		public const int MaxQuery = 256;
 		public const int MaxContext = 512;
-		public const int MaxResponse = MaxContext*3;
+		public const int MaxResponse = MaxContext * 3;
 #endif
 		public const int MaxWords = 64;
 		public const string ModelName = "qwen2.5-coder.calm";
@@ -98,7 +98,7 @@ namespace HandyTools.Completion
 		{
 			generated_.Length = 0;
 			PrefixToken = get_fim_prefix(model_, MaxResponse, generated_);
-			if(0<= PrefixToken)
+			if (0 <= PrefixToken)
 			{
 				Prefix = generated_.ToString();
 			}
@@ -237,7 +237,7 @@ namespace HandyTools.Completion
 			{
 				return null;
 			}
-			if(language.language == Language.None)
+			if (language.language == Language.None)
 			{
 				return null;
 			}
@@ -277,21 +277,19 @@ namespace HandyTools.Completion
 			generated_.Length = 0;
 			generate_one(model_, MaxResponse, generated_, (uint)query.Length, query, MaxContext, 0, 1.0f, 0.1f, MaxContext, PadToken);
 			List<Completion> completions = new List<Completion>();
-			getSuggestion(completions, generated_, cursorPosition, MaxWords);
 #if false
-			if (!string.IsNullOrEmpty(suggestion))
-			{
-				Completion completion = new Completion();
-				completion.id = Guid.NewGuid();
-				completion.text = suggestion;
-				completion.startOffset = cursorPosition;
-				completion.endOffset = cursorPosition + suggestion.Length;
-				completions.Add(completion);
-			}
+			getSuggestion(completions, generated_, cursorPosition, MaxWords);
+#else
+			Completion completion = new Completion();
+			completion.id = Guid.NewGuid();
+			completion.text = "test";
+			completion.startOffset = cursorPosition;
+			completion.endOffset = completion.startOffset + completion.text.Length;
+			completions.Add(completion);
 #endif
 			return completions;
-        }
-		
+		}
+
 		private string createQuery(ITextSnapshot text, int cursorPosition, float prefix_rate, int max_length)
 		{
 			char c = text[cursorPosition];
@@ -299,18 +297,18 @@ namespace HandyTools.Completion
 			int prefix_max = (int)(max_length * prefix_rate);
 
 			int prefix_start = Math.Max(0, cursorPosition - prefix_max);
-			while (char.IsWhiteSpace(text[prefix_start])&& prefix_start<text.Length)
+			while (char.IsWhiteSpace(text[prefix_start]) && prefix_start < text.Length)
 			{
 				++prefix_start;
 			}
 			int suffix_max = max_length - (cursorPosition - prefix_start);
-			int suffix_end = Math.Min(cursorPosition + suffix_max, text.Length-1);
-			for(; cursorPosition<suffix_end; --suffix_end)
+			int suffix_end = Math.Min(cursorPosition + suffix_max, text.Length - 1);
+			for (; cursorPosition < suffix_end; --suffix_end)
 			{
 				if (char.IsWhiteSpace(text[suffix_end]))
 				{
 					--suffix_end;
-					while (cursorPosition< suffix_end && char.IsWhiteSpace(text[suffix_end]))
+					while (cursorPosition < suffix_end && char.IsWhiteSpace(text[suffix_end]))
 					{
 						--suffix_end;
 					}
@@ -343,9 +341,9 @@ namespace HandyTools.Completion
 				return;
 			}
 			string[] words = lines[0].Split(' ', '\t', '\b');
-			for (int i = 0; i < words.Length && i<=max_words; ++i)
+			for (int i = 0; i < words.Length && i <= max_words; ++i)
 			{
-				if(string.IsNullOrEmpty(words[i]))
+				if (string.IsNullOrEmpty(words[i]))
 				{
 					continue;
 				}
@@ -376,7 +374,7 @@ namespace HandyTools.Completion
 		{
 			if (!disposed_)
 			{
-				if(model_ != IntPtr.Zero)
+				if (model_ != IntPtr.Zero)
 				{
 					destroy_model(model_);
 					model_ = IntPtr.Zero;

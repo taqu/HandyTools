@@ -24,7 +24,6 @@ using System.Windows.Forms;
 
 namespace HandyTools.Completion
 {
-
 	internal class HandyToolsCompletionHandler : IOleCommandTarget, IDisposable
 	{
 		private HandyToolsPackage package_;
@@ -729,7 +728,6 @@ namespace HandyTools.Completion
 			UpdateRequestTokenSource(null);
 		}
 	}
-
 	[Export(typeof(IVsTextViewCreationListener))]
 	[Name("TextViewListener")]
 	[ContentType("code")]
