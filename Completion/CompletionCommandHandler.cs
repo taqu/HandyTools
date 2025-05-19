@@ -22,6 +22,7 @@ using System.Threading;
 using System.Windows.Forms;
 using System.Text;
 using Microsoft.VisualStudio.Shell.Interop;
+using EnvDTE;
 
 namespace HandyTools
 {
@@ -242,15 +243,14 @@ namespace HandyTools
                 {
                     return;
                 }
-                LanguageInfo language = SupportedLanguage.GetLanguage(textView_.TextDataModel.ContentType);
                 CompletionModel completionModel = package.GetCompletionModel();
                 if (null == completionModel)
                 {
                     return;
                 }
-                //completionModel.GetCompletionsAsync(document_.FilePath, textView_.TextSnapshot, language, lineN)
-                List<Completion.Completion> completions = new List<Completion.Completion>();
-                completions.Add(new Completion.Completion { id = Guid.NewGuid(), text = "test", startOffset = cursorPosition, endOffset = cursorPosition + 4 });
+                IList<Completion.Completion>? completions = await completionModel.GetCompletionsAsync(document_.FilePath, textView_.TextSnapshot, language_, cursorPosition, "\n", 4, false);
+                //List<Completion.Completion> completions = new List<Completion.Completion>();
+                //completions.Add(new Completion.Completion { id = Guid.NewGuid(), text = "test", startOffset = cursorPosition, endOffset = cursorPosition + 4 });
                 package.SetCompletionModel(completionModel);
 
                 if(null == completions || completions.Count <= 0)
@@ -283,38 +283,6 @@ namespace HandyTools
                     suggestionIndex_ = 0;
                     _ = tagger.SetSuggestion(suggestions_[0].Item1, column);
                 }
-#if false
-                int lineN;
-                int characterN;
-
-                int res = _textViewAdapter.GetCaretPos(out lineN, out characterN);
-                String line = _view.TextBuffer.CurrentSnapshot.GetLineFromLineNumber(lineN).GetText();
-                Debug.Print("completions " + list.Count.ToString());
-
-                if (res != VSConstants.S_OK)
-                {
-                    return;
-                }
-
-                if (list != null && list.Count > 0)
-                {
-                    Debug.Print("completions " + list.Count.ToString());
-
-                    string prefix = line.Substring(0, Math.Min(characterN, line.Length));
-                    suggestions = ParseCompletion(list, text, line, prefix, characterN);
-
-                    SuggestionTagger tagger = GetTagger();
-                    if (suggestions != null && suggestions.Count > 0 && tagger != null)
-                    {
-                        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                        suggestionIndex = 0;
-                        currentCompletionID = suggestions[0].Item2;
-                        var valid = tagger.SetSuggestion(suggestions[0].Item1, characterN);
-                    }
-
-                    await package.LogAsync("Generated " + list.Count + $" proposals");
-                }
-#endif
             }
             catch (Exception ex)
             {
@@ -536,6 +504,10 @@ namespace HandyTools
         {
             //let the other handlers handle automation functions
             if (VsShellUtilities.IsInAutomationFunction(provider_.ServiceProvider))
+            {
+                return nextCommandHandler_.Exec(ref pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut);
+            }
+            if(language_.language == Completion.Language.None)
             {
                 return nextCommandHandler_.Exec(ref pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut);
             }

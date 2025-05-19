@@ -230,8 +230,7 @@ namespace HandyTools.Completion
 			string absolutePath,
 			ITextSnapshot text,
 			LanguageInfo language,
-			int cursorPosition, string lineEnding, int tabSize, bool insertSpaces,
-			CancellationToken token)
+			int cursorPosition, string lineEnding, int tabSize, bool insertSpaces)
 		{
 			if (IntPtr.Zero == model_)
 			{
@@ -241,37 +240,6 @@ namespace HandyTools.Completion
 			{
 				return null;
 			}
-#if false
-			var uri = new System.Uri(absolutePath);
-			var absoluteUri = uri.AbsoluteUri;
-			GetCompletionsRequest data =
-				new()
-				{
-					metadata = GetMetadata(),
-					document = new()
-					{
-						text = text,
-						editor_language = language.Name,
-						language = language.Type,
-						cursor_offset = (ulong)cursorPosition,
-						line_ending = lineEnding,
-						absolute_path = absolutePath,
-						absolute_uri = absoluteUri,
-						relative_path = Path.GetFileName(absolutePath)
-					},
-					editor_options = new()
-					{
-						tab_size = (ulong)tabSize,
-						insert_spaces = insertSpaces,
-						disable_autocomplete_in_comments =
-								!_package.SettingsPage.EnableCommentCompletion,
-					}
-				};
-
-			GetCompletionsResponse? result =
-				await RequestCommandAsync<GetCompletionsResponse>("GetCompletions", data, token);
-			return result != null ? result.completionItems : [];
-#endif
 			string query = createQuery(text, cursorPosition, 0.5f, MaxQuery);
 
 			generated_.Length = 0;
