@@ -43,6 +43,10 @@ namespace HandyTools.Commands
         };
 #endif
 
+        private static readonly System.Text.RegularExpressions.Regex NewLineMatcher = new System.Text.RegularExpressions.Regex(
+            @"(?:\r\n|\n|\r)",
+            System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.Singleline);
+
         public static Types.TypeLanguage GetLanguageFromDocument(EnvDTE.Document document)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -478,6 +482,91 @@ namespace HandyTools.Commands
 			string suffix = text.Substring(wordEnd);
             return (prefix, suffix);
 		}
+
+        public static int SkipWhiteSpace(String s, int index)
+        {
+            while(index<s.Length && Char.IsWhiteSpace(s[index]))
+            {
+                ++index;
+            }
+            return index;
+        }
+
+        public static bool IsIDChar(char c)
+        {
+            return Char.IsLetterOrDigit(c) || c == '_';
+        }
+        // Compares the two strings to see if a is a prefix of b ignoring whitespace
+        public static Tuple<int, int> CompareStrings(string a, string b)
+        {
+            int a_index = 0, b_index = 0;
+            while (a_index < a.Length && b_index < b.Length)
+            {
+                char aChar = a[a_index];
+                char bChar = b[b_index];
+                if (aChar == bChar)
+                {
+                    a_index++;
+                    b_index++;
+                }
+                else
+                {
+                    if (Char.IsWhiteSpace(bChar))
+                    {
+                        b_index = SkipWhiteSpace(b, b_index);
+
+                        continue;
+                    }
+
+                    if (Char.IsWhiteSpace(aChar) && b_index >= 1 &&
+                        (!IsIDChar(b[b_index]) || !IsIDChar(b[b_index - 1])))
+                    {
+                        a_index = SkipWhiteSpace(a, a_index);
+
+                        continue;
+                    }
+
+                    break;
+                }
+            }
+
+            return new Tuple<int, int>(a_index, b_index);
+        }
+
+        public static int CheckSuggestion(
+            string suggestion,
+            string line,
+            bool isTextInsertion = false,
+            int insertionPoint = -1)
+        {
+            if (line.Length == 0) { return 0; }
+
+            int index = suggestion.IndexOf(line);
+            int endPos = index + line.Length;
+            int firstLineBreak = IndexOfNewLine(suggestion);
+
+            if (index > -1 && (firstLineBreak == -1 || endPos < firstLineBreak))
+            {
+                return index == 0 ? line.Length : -1;
+            }
+            else
+            {
+                Tuple<int, int> res = CompareStrings(line, suggestion);
+                int endPoint = isTextInsertion ? line.Length - insertionPoint : line.Length;
+                return res.Item1 >= endPoint ? res.Item2 : -1;
+            }
+        }
+
+        public static int IndexOfNewLine(string text)
+        {
+            System.Text.RegularExpressions.Match newLineMatch = NewLineMatcher.Match(text);
+
+            if (newLineMatch.Success)
+            {
+                return newLineMatch.Index;
+            }
+            return -1;
+        }
     }
 }
 

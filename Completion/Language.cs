@@ -1,7 +1,11 @@
 ﻿
 using Microsoft.Build.Framework.XamlTypes;
+using Microsoft.VisualStudio.Text;
+using Microsoft.VisualStudio.Text.Editor;
+using Microsoft.VisualStudio.Text.Projection;
 using Microsoft.VisualStudio.Utilities;
 using System.IO;
+using System.Windows.Controls;
 
 namespace HandyTools.Completion
 {
@@ -26,10 +30,10 @@ namespace HandyTools.Completion
 
         public static LanguageInfo GetLanguage(DocumentView documentView)
         {
-			return GetLanguage(documentView.TextBuffer.ContentType, Path.GetExtension(documentView.FilePath)?.Trim('.'));
+            return GetLanguage(documentView.TextBuffer.ContentType);// Path.GetExtension(documentView.FilePath)?.Trim('.'));
         }
 
-        public static LanguageInfo GetLanguage(IContentType contentType, string ext)
+        public static LanguageInfo GetLanguage(IContentType contentType)
         {
             switch (contentType.TypeName) {
                 case "Text":

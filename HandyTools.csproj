@@ -59,13 +59,17 @@
     <Compile Include="Commands\CommandShowChatWindow.cs" />
     <Compile Include="Commands\CommandTranslateAndReplace.cs" />
     <Compile Include="Commands\CommandTranslation.cs" />
+    <Compile Include="Completion\CommandAcceptCompletion.cs" />
     <Compile Include="Completion\CompletionModel.cs" />
-    <Compile Include="Completion\InlineGrayTextTagger.cs" />
-    <Compile Include="Completion\Language.cs" />
-    <Compile Include="Completion\StringUtils.cs" />
     <Compile Include="Completion\CompletionTag.cs" />
-    <Compile Include="Completion\CompletionTagger.cs" />
-    <Compile Include="Completion\TextViewListener.cs" />
+    <Compile Include="Completion\InlineGreyTextTagger.cs" />
+    <Compile Include="Completion\InlineTaggerProvider.cs" />
+    <Compile Include="Completion\Language.cs" />
+    <Compile Include="Completion\CompletionCommandHandler.cs" />
+    <Compile Include="Completion\CompletionHandlerProvider.cs" />
+    <Compile Include="Completion\MultilineGreyTextProvider.cs" />
+    <Compile Include="Completion\MultilineGreyTextTagger.cs" />
+    <Compile Include="Completion\StringUtils.cs" />
     <Compile Include="DefaultPrompts.cs" />
     <Compile Include="Log.cs" />
     <Compile Include="Models\ModelOpenAI.cs" />
@@ -125,9 +129,6 @@
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
-    <Content Include="qwen2.5-coder-1.5b.calm">
-      <IncludeInVSIX>true</IncludeInVSIX>
-    </Content>
     <None Include="source.extension.vsixmanifest">
       <SubType>Designer</SubType>
       <Generator>VsixManifestGenerator</Generator>
