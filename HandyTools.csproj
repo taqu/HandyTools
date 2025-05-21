@@ -118,8 +118,33 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="qwen2.5-coder.calm">
+    <Content Include="ggml-base.dll">
       <IncludeInVSIX>true</IncludeInVSIX>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ggml-cpu.dll">
+      <IncludeInVSIX>true</IncludeInVSIX>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ggml-cuda.dll">
+      <IncludeInVSIX>true</IncludeInVSIX>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ggml-vulkan.dll">
+      <IncludeInVSIX>true</IncludeInVSIX>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ggml.dll">
+      <IncludeInVSIX>true</IncludeInVSIX>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="llama.dll">
+      <IncludeInVSIX>true</IncludeInVSIX>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="mtmd_shared.dll">
+      <IncludeInVSIX>true</IncludeInVSIX>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Resources\Icon.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -129,6 +154,9 @@
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
+    <Content Include="Resources\qwen2.5-coder-0.5b-instruct-q4_k_m.gguf">
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
     <None Include="source.extension.vsixmanifest">
       <SubType>Designer</SubType>
       <Generator>VsixManifestGenerator</Generator>
@@ -183,9 +211,9 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="cplm\cplm.vcxproj">
-      <Project>{a98c8682-9673-4b05-9063-dc1000f0b293}</Project>
-      <Name>cplm</Name>
+    <ProjectReference Include="llama.cpp\llama.cpp.vcxproj">
+      <Project>{c424401b-2cfe-4d55-966e-6c8f0d80617f}</Project>
+      <Name>llama.cpp</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

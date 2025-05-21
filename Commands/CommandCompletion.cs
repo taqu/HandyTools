@@ -20,8 +20,6 @@ namespace HandyTools.Commands
 			Response = Types.TypeResponse.Append;
 			FormatResponse = settingFile.FormatResponse;
 			MaxTextLength = settingFile.MaxTextLength;
-			maxCompletionInputSize_ = settingFile.MaxCompletionInputSize;
-			maxCompletionOutputSize_ = settingFile.MaxCompletionOutputSize;
 			completionPrompt_ = settingFile.PromptCompletion;
 		}
 

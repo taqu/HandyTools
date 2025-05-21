@@ -138,8 +138,27 @@ namespace HandyTools
 
 		public static WeakReference<HandyToolsPackage> Package { get => package_; }
 
+		public static async Task<Options.OptionPageHandyTools> GetOptionAsync()
+		{
+			HandyToolsPackage package = await GetPackageAsync();
+			if (null == package)
+			{
+				return null;
+			}
+			return package.Options;
+		}
 
-        public EnvDTE80.DTE2 DTE { get { return dte2_; } }
+		public static async Task<Options.OptionPageHandyToolsAI> GetOptionAIAsync()
+		{
+			HandyToolsPackage package = await GetPackageAsync();
+			if(null == package)
+			{
+				return null;
+			}
+			return package.AIOptions;
+		}
+
+		public EnvDTE80.DTE2 DTE { get { return dte2_; } }
 		public SVsRunningDocumentTable RDT { get { return runningDocumentTable_; } }
 
 		public Options.OptionPageHandyTools Options

@@ -1,15 +1,9 @@
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
-using static HandyTools.Types;
 
 namespace HandyTools.Options
 {
-    [ComVisible(true)]
+	[ComVisible(true)]
 	public class OptionPageHandyToolsAI : Microsoft.VisualStudio.Shell.DialogPage
     {
 		[Category("API")]
@@ -103,39 +97,12 @@ namespace HandyTools.Options
 		}
 
 		[Category("Model")]
-		[DisplayName("RealTimeCompletion")]
-		[Description("Real time completion")]
-		public bool RealTimeCompletion 
-		{
-			get { return realTimeCompletion_; }
-			set { realTimeCompletion_ = value; }
-		}
-
-		[Category("Model")]
-		[DisplayName("Max Interval Time for Completion")]
-		[Description("Max Waiting Time for Completion")]
-		public int CompletionIntervalInMilliseconds
-		{
-			get { return completionIntervalInMilliseconds_; }
-			set { completionIntervalInMilliseconds_ = value; }
-		}
-
-		[Category("Model")]
 		[DisplayName("Max Input for Completion")]
 		[Description("Max Input Context Size for Completion")]
-		public int MaxCompletionInputSize
+		public bool InlineCompletion 
 		{
-			get { return maxCompletionInputSize_; }
-			set { maxCompletionInputSize_ = value; }
-		}
-
-		[Category("Model")]
-		[DisplayName("Max Output for Completion")]
-		[Description("Max Output Context Size for Completion")]
-		public int MaxCompletionOutputSize
-		{
-			get { return maxCompletionOutputSize_; }
-			set { maxCompletionOutputSize_ = value; }
+			get { return inlineCompletion_; }
+			set { inlineCompletion_ = value; }
 		}
 
 		[Category("Prompt")]
@@ -184,10 +151,7 @@ namespace HandyTools.Options
 		private float temperature_ = 0.1f;
         private int maxTextLength_ = 4096;
 		private int timeout_ = 30;
-		private bool realTimeCompletion_ = false;
-		private int completionIntervalInMilliseconds_ = 1000;
-		private int maxCompletionInputSize_ = 4096;
-		private int maxCompletionOutputSize_ = 64;
+		private bool inlineCompletion_ = false;
 		private string promptCompletion_ = DefaultPrompts.PromptCompletion;
 		private string promptExplanation_ = DefaultPrompts.PromptExplanation;
 		private string promptTranslation_ = DefaultPrompts.PromptTranslation;

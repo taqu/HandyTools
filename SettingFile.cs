@@ -58,10 +58,7 @@ namespace HandyTools
 				temperature_ = settings.temperature_;
 				maxTextLength_ = settings.maxTextLength_;
 				timeout_ = settings.timeout_;
-				realTimeCompletion_ = settings.realTimeCompletion_;
-				maxCompletionInputSize_ = settings.maxCompletionInputSize_;
-				completionIntervalInMilliseconds_ = settings.completionIntervalInMilliseconds_;
-				maxCompletionOutputSize_ = settings.maxCompletionOutputSize_;
+				inlineCompletion_ = settings.inlineCompletion_;
 				promptCompletion_ = settings.promptCompletion_;
 				promptExplanation_ = settings.promptExplanation_;
 				promptTranslation_ = settings.promptTranslation_;
@@ -155,24 +152,9 @@ namespace HandyTools
 				get { return timeout_; }
 			}
 
-			public bool RealTimeCompletion
+			public bool InlineCompletion 
 			{
-				get { return realTimeCompletion_; }
-			}
-
-			public int MaxCompletionInputSize
-			{
-				get { return maxCompletionInputSize_; }
-			}
-
-			public long CompletionIntervalInMilliseconds
-			{
-				get { return completionIntervalInMilliseconds_; }
-			}
-
-			public int MaxCompletionOutputSize
-			{
-				get { return maxCompletionOutputSize_; }
+				get { return inlineCompletion_; }
 			}
 
 			public string PromptCompletion
@@ -208,7 +190,7 @@ namespace HandyTools
 			private float temperature_ = 0.1f;
 			private int maxTextLength_ = 4096;
 			private int timeout_ = 30;
-			private bool realTimeCompletion_ = false;
+			private bool inlineCompletion_ = false;
 			private int maxCompletionInputSize_ = 4096;
 			private long completionIntervalInMilliseconds_ = 1000;
 			private int maxCompletionOutputSize_ = 64;
@@ -302,28 +284,10 @@ namespace HandyTools
 			set { timeout_ = value; }
 		}
 
-		public bool RealTimeCompletion
+		public bool InlineCompletion
 		{
-			get { return realTimeCompletion_; }
-			set { realTimeCompletion_ = value; }
-		}
-
-		public long CompletionIntervalInMilliseconds
-		{
-			get { return completionIntervalInMilliseconds_; }
-			set { completionIntervalInMilliseconds_ = value; }
-		}
-
-		public int MaxCompletionInputSize
-		{
-			get { return maxCompletionInputSize_; }
-			set { maxCompletionInputSize_ = value;}
-		}
-
-		public int MaxCompletionOutputSize
-		{
-			get { return maxCompletionOutputSize_; }
-			set { maxCompletionOutputSize_ = value; }
+			get { return inlineCompletion_; }
+			set { inlineCompletion_ = value; }
 		}
 
 		public string PromptCompletion
@@ -375,10 +339,7 @@ namespace HandyTools
 		private float temperature_ = 0.1f;
 		private int maxTextLength_ = 4096;
 		private int timeout_ = 30;
-		private bool realTimeCompletion_;
-		private long completionIntervalInMilliseconds_ = 1000;
-		private int maxCompletionInputSize_ = 4096;
-		private int maxCompletionOutputSize_ = 64;
+		private bool inlineCompletion_;
 		private string promptCompletion_ = DefaultPrompts.PromptCompletion;
 		private string promptExplanation_ = DefaultPrompts.PromptExplanation;
 		private string promptTranslation_ = DefaultPrompts.PromptTranslation;
@@ -606,38 +567,11 @@ namespace HandyTools
 									settingFile.Timeout = timeout;
 								}
 								break;
-							case "RealTimeCompletion":
+							case "InlineCompletion":
 								{
-									bool realTimeCompletion = false;
-									bool.TryParse(child.InnerText.Trim().ToLower(), out realTimeCompletion);
-									settingFile.RealTimeCompletion = realTimeCompletion;
-								}
-								break;
-							case "CompletionIntervalInMilliseconds":
-								{
-									long completionIntervalInMilliseconds = 1000;
-									long.TryParse(child.InnerText.Trim().ToLower(), out completionIntervalInMilliseconds);
-									settingFile.CompletionIntervalInMilliseconds = completionIntervalInMilliseconds;
-								}
-								break;
-							case "MaxCompletionInputSize":
-								{
-									int maxCompletionInputSize = 4000;
-									int.TryParse(child.InnerText.Trim().ToLower(), out maxCompletionInputSize);
-									if (0 < maxCompletionInputSize)
-									{
-										settingFile.MaxCompletionInputSize = maxCompletionInputSize;
-									}
-								}
-								break;
-							case "MaxCompletionOutputSize":
-								{
-									int maxCompletionOutputSize = 64;
-									int.TryParse(child.InnerText.Trim().ToLower(), out maxCompletionOutputSize);
-									if (0 < maxCompletionOutputSize)
-									{
-										settingFile.MaxCompletionOutputSize = maxCompletionOutputSize;
-									}
+									bool inlineCompletion = false;
+									bool.TryParse(child.InnerText.Trim().ToLower(), out inlineCompletion);
+									settingFile.InlineCompletion = inlineCompletion;
 								}
 								break;
 							case "PromptCompletion":
@@ -768,10 +702,7 @@ namespace HandyTools
 				settingFile.Temperature = optionPageAI.Temperature;
 				settingFile.MaxTextLength = optionPageAI.MaxTextLength;
 				settingFile.Timeout = optionPageAI.Timeout;
-				settingFile.RealTimeCompletion = optionPageAI.RealTimeCompletion;
-				settingFile.CompletionIntervalInMilliseconds = optionPageAI.CompletionIntervalInMilliseconds;
-				settingFile.MaxCompletionInputSize = optionPageAI.MaxCompletionInputSize;
-				settingFile.MaxCompletionOutputSize = optionPageAI.MaxCompletionOutputSize;
+				settingFile.InlineCompletion = optionPageAI.InlineCompletion;
 				settingFile.PromptCompletion = optionPageAI.PromptCompletion;
 				settingFile.PromptExplanation = optionPageAI.PromptExplanation;
 				settingFile.PromptTranslation = optionPageAI.PromptTranslation;

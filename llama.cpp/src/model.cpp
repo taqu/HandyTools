@@ -140,10 +140,9 @@ Model* Model::load(const char8_t* path, int32_t n_gpu_layers)
     assert(nullptr != path);
     ggml_backend_dev_t device = nullptr;
     for(size_t i = 0; i < ggml_backend_dev_count(); ++i) {
-        ggml_backend_dev_t dev = ggml_backend_dev_get(i);
-        enum ggml_backend_dev_type type = ggml_backend_dev_type(dev);
+        device = ggml_backend_dev_get(i);
+        enum ggml_backend_dev_type type = ggml_backend_dev_type(device);
         if(type == GGML_BACKEND_DEVICE_TYPE_GPU) {
-            device = dev;
             break;
         }
     }
@@ -249,18 +248,20 @@ void Model::end(Context* context)
     delete context;
 }
 
-int32_t Model::generate(Context* context)
+int32_t Model::generate(int32_t size, char8_t* output, Context* context)
 {
+    assert(0<size);
     assert(nullptr != context);
     int32_t n_decode = 0;
     llama_token new_token_id;
     llama_batch& batch = context->batch_;
     const llama_vocab * vocab = llama_model_get_vocab(model_);
+    int32_t len = 0;
+    output[0] = u8'\0';
 
     for(int32_t n_pos = 0; n_pos + batch.n_tokens < context->n_prompt_ + context->n_predict_;) {
         // evaluate the current batch with the transformer model
         if(llama_decode(context->context_, batch)) {
-            fprintf(stderr, "%s : failed to eval, return code %d\n", __func__, 1);
             return -1;
         }
 
@@ -275,16 +276,22 @@ int32_t Model::generate(Context* context)
                 break;
             }
 
-            char buf[128];
-            int32_t n = llama_token_to_piece(vocab, new_token_id, buf, sizeof(buf), 0, true);
+            char buf[64];
+            int32_t n = llama_token_to_piece(vocab, new_token_id, buf, sizeof(buf)-1, 0, true);
             if(n < 0) {
-                fprintf(stderr, "%s: error: failed to convert token to piece\n", __func__);
                 return -1;
             }
-            std::string s(buf, n);
-            printf("%s", s.c_str());
-            fflush(stdout);
-
+            n = (std::min)(size-len-1, n);
+            buf[n] = '\0';
+#ifdef _WIN32
+            strcat_s((char*)output, size, buf);
+#else
+            strcat((char*)output, buf);
+#endif
+            len += n;
+            if(size <= len) {
+                break;
+            }
             // prepare the next batch with the sampled token
             batch = llama_batch_get_one(&new_token_id, 1);
 
@@ -292,6 +299,12 @@ int32_t Model::generate(Context* context)
         }
     }
     return n_decode;
+}
+
+const struct llama_vocab* Model::vocab() const
+{
+    assert(nullptr != model_);
+    return llama_model_get_vocab(model_);
 }
 
 //--- Context

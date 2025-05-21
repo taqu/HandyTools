@@ -20,18 +20,10 @@ CPLM_EXPORT int32_t CPLM_STDCALL get_fim_middle(void* model, int32_t size, uint1
 CPLM_EXPORT int32_t CPLM_STDCALL get_fim_suffix(void* model, int32_t size, uint16_t* str);
 CPLM_EXPORT int32_t CPLM_STDCALL get_fim_pad(void* model, int32_t size, uint16_t* str);
 
-CPLM_EXPORT void CPLM_STDCALL generate_one(
-	void* model,
-	uint32_t buffer_size,
-	uint16_t* generated,
-	uint32_t size,
-	const uint16_t* text,
-	int32_t context,
-	uint32_t seed,
-	float temperature,
-	float minp,
-	int32_t steps,
-	int32_t stop_token);
+CPLM_EXPORT void* CPLM_STDCALL begin(void* model, int32_t size, const uint16_t* prompt, int32_t n_predict, float temperature, uint32_t seed);
+CPLM_EXPORT void CPLM_STDCALL end(void* model, void* context);
+CPLM_EXPORT int32_t CPLM_STDCALL generate(void* model, void* context, int32_t size, uint16_t* output);
+
 #ifdef __cplusplus
 }
 #endif

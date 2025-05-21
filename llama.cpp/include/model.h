@@ -64,8 +64,9 @@ public:
 
     Context* begin(const char8_t* prompt, int32_t n_predict, float temperature = 0.8f, uint32_t seed = LLAMA_DEFAULT_SEED);
     void end(Context* context);
-    int32_t generate(Context* context);
+    int32_t generate(int32_t size, char8_t* output, Context* context);
 
+    const struct llama_vocab* vocab() const;
 private:
     Model(const Model&) = delete;
     Model& operator=(const Model&) = delete;

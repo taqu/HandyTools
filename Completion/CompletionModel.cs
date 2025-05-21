@@ -1,22 +1,13 @@
-﻿using EnvDTE80;
-using MessagePack.Formatters;
-using Microsoft.VisualStudio.Debugger.Interop;
-using Microsoft.VisualStudio.Shell.Interop;
+﻿using HandyTools.Commands;
 using Microsoft.VisualStudio.Text;
-using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace HandyTools.Completion
 {
 	public record struct Completion(
-		Guid id,
 		string text,
 		int startOffset,
 		int endOffset
@@ -33,57 +24,49 @@ namespace HandyTools.Completion
 
 	public class CompletionModel : IDisposable
 	{
-		[DllImport("cplm.dll")]
-		static extern unsafe IntPtr create_model(ulong size, IntPtr memory, int context);
-
-		[DllImport("cplm.dll")]
+		[DllImport("llama.cpp.dll", CharSet = CharSet.Unicode)]
+		static extern unsafe IntPtr create_model(string path, int n_gpu_layers=99);
+		[DllImport("llama.cpp.dll")]
 		static extern void destroy_model(IntPtr model);
 
-		[DllImport("cplm.dll")]
-		static extern bool is_gpu(IntPtr model);
-		[DllImport("cplm.dll", CharSet = CharSet.Unicode)]
+		[DllImport("llama.cpp.dll", CharSet = CharSet.Unicode)]
 		static extern int get_fim_prefix(IntPtr model, int size, StringBuilder str);
-		[DllImport("cplm.dll", CharSet = CharSet.Unicode)]
+		[DllImport("llama.cpp.dll", CharSet = CharSet.Unicode)]
 		static extern int get_fim_middle(IntPtr model, int size, StringBuilder str);
-		[DllImport("cplm.dll", CharSet = CharSet.Unicode)]
+		[DllImport("llama.cpp.dll", CharSet = CharSet.Unicode)]
 		static extern int get_fim_suffix(IntPtr model, int size, StringBuilder str);
-		[DllImport("cplm.dll", CharSet = CharSet.Unicode)]
+		[DllImport("llama.cpp.dll", CharSet = CharSet.Unicode)]
 		static extern int get_fim_pad(IntPtr model, int size, StringBuilder str);
 
-		[DllImport("cplm.dll", CharSet = CharSet.Unicode)]
-		static extern void generate_one(
-			IntPtr model,
-			uint buffer_size,
-			StringBuilder generated,
-			uint size,
-			string text,
-			int context,
-			ulong seed = 0,
-			float temperature = 1.0f,
-			float minp = 0.1f,
-			int steps = 4096,
-			int stop_token = -1);
+		[DllImport("llama.cpp.dll", CharSet = CharSet.Unicode)]
+		static extern IntPtr begin(IntPtr model, int size, string prompt, int n_predict, float temperature=0.0f, uint seed=0xFFFFFFFF);
+		[DllImport("llama.cpp.dll", CharSet = CharSet.Unicode)]
+		static extern void end(IntPtr model, IntPtr context);
+		[DllImport("llama.cpp.dll", CharSet = CharSet.Unicode)]
+		static extern int generate(IntPtr model, IntPtr context, int size, StringBuilder output);
 
 #if false
 		public const int MaxQuery = 3072;
 		public const int MaxContext = 4096;
-		public const int MaxResponse = MaxContext*3;
+		public const int MaxTokenSize = 16;
+		public const int MaxResponse = MaxContext*MaxTokenSize;
 #elif false
 		public const int MaxQuery = 1024;
 		public const int MaxContext = 2048;
-		public const int MaxResponse = MaxContext*3;
+		public const int MaxTokenSize = 16;
+		public const int MaxResponse = MaxContext*MaxTokenSize;
 #else
 		public const int MaxQuery = 256;
 		public const int MaxContext = 512;
-		public const int MaxResponse = MaxContext * 3;
+		public const int MaxTokenSize = 16;
+		public const int MaxResponse = MaxContext * MaxTokenSize;
 #endif
-		public const int MaxWords = 64;
-		public const string ModelName = "qwen2.5-coder.calm";
+		public const int MaxLines = 4;
+		public const string ModelName = "qwen2.5-coder-0.5b-instruct-q4_k_m.gguf";
 
 		private bool disposed_ = false;
 		private IntPtr model_ = IntPtr.Zero;
-		private StringBuilder buffer_ = new StringBuilder(4096);
-		private StringBuilder generated_ = new StringBuilder(MaxResponse);
+		private StringBuilder buffer_ = new StringBuilder(MaxResponse);
 
 		private int PrefixToken = -1;
 		private string Prefix = "<|fim_prefix|>";
@@ -96,83 +79,66 @@ namespace HandyTools.Completion
 
 		private void GetPrefix()
 		{
-			generated_.Length = 0;
-			PrefixToken = get_fim_prefix(model_, MaxResponse, generated_);
+			buffer_.Length = 0;
+			PrefixToken = get_fim_prefix(model_, MaxTokenSize, buffer_);
 			if (0 <= PrefixToken)
 			{
-				Prefix = generated_.ToString();
+				Prefix = buffer_.ToString();
 			}
 		}
 
 		private void GetMiddle()
 		{
-			generated_.Length = 0;
-			MiddleToken = get_fim_middle(model_, MaxResponse, generated_);
+			buffer_.Length = 0;
+			MiddleToken = get_fim_middle(model_, MaxTokenSize, buffer_);
 			if (0 <= MiddleToken)
 			{
-				Middle = generated_.ToString();
+				Middle = buffer_.ToString();
 			}
 		}
 
 		private void GetSuffix()
 		{
-			generated_.Length = 0;
-			SuffixToken = get_fim_suffix(model_, MaxResponse, generated_);
+			buffer_.Length = 0;
+			SuffixToken = get_fim_suffix(model_, MaxTokenSize, buffer_);
 			if (0 <= SuffixToken)
 			{
-				Suffix = generated_.ToString();
+				Suffix = buffer_.ToString();
 			}
 		}
 
 		private void GetPad()
 		{
-			generated_.Length = 0;
-			PadToken = get_fim_pad(model_, MaxResponse, generated_);
+			buffer_.Length = 0;
+			PadToken = get_fim_pad(model_, MaxTokenSize, buffer_);
 			if (0 <= PadToken)
 			{
-				Pad = generated_.ToString();
+				Pad = buffer_.ToString();
 			}
 		}
 
 		public static CompletionModel Initialize()
 		{
 			string path = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-			path = System.IO.Path.Combine(path, ModelName);
-			System.IO.FileInfo fileInfo = new System.IO.FileInfo(path);
-			if (!fileInfo.Exists)
+			path = System.IO.Path.Combine(path, "Resources", ModelName);
+			if (!System.IO.File.Exists(path))
 			{
 				return null;
 			}
 			try
 			{
-				using (FileStream stream = fileInfo.OpenRead())
+				IntPtr ptr = create_model(path);
+				if (ptr == IntPtr.Zero)
 				{
-					byte[] buffer = new byte[fileInfo.Length];
-					int size = stream.Read(buffer, 0, buffer.Length);
-					if (size <= 0)
-					{
-						return null;
-					}
-					IntPtr ptr = IntPtr.Zero;
-					unsafe
-					{
-						fixed (byte* bytes = buffer)
-						{
-							ptr = create_model((ulong)buffer.LongLength, (IntPtr)bytes, 4096);
-							if (ptr == IntPtr.Zero)
-							{
-								return null;
-							}
-						}
-					}
-					CompletionModel model = new CompletionModel();
-					model.model_ = ptr;
-					model.GetSuffix();
-					model.GetMiddle();
-					model.GetSuffix();
-					model.GetPad();
-					return model;
+					return null;
 				}
+				CompletionModel model = new CompletionModel();
+				model.model_ = ptr;
+				model.GetPrefix();
+				model.GetMiddle();
+				model.GetSuffix();
+				model.GetPad();
+				return model;
 			}
 			catch
 			{
@@ -183,42 +149,25 @@ namespace HandyTools.Completion
 		public static async Task<CompletionModel> InitializeAsync()
 		{
 			string path = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-			path = System.IO.Path.Combine(path, ModelName);
-			System.IO.FileInfo fileInfo = new System.IO.FileInfo(path);
-			if (!fileInfo.Exists)
+			path = System.IO.Path.Combine(path, "Resources", ModelName);
+			if (!System.IO.File.Exists(path))
 			{
 				return null;
 			}
 			try
 			{
-				using (FileStream stream = fileInfo.OpenRead())
+				IntPtr ptr = await Task.Run<IntPtr>(()=> create_model(path));
+				if (ptr == IntPtr.Zero)
 				{
-					byte[] buffer = new byte[fileInfo.Length];
-					int size = await stream.ReadAsync(buffer, 0, buffer.Length);
-					if (size <= 0)
-					{
-						return null;
-					}
-					IntPtr ptr = IntPtr.Zero;
-					unsafe
-					{
-						fixed (byte* bytes = buffer)
-						{
-							ptr = create_model((ulong)buffer.LongLength, (IntPtr)bytes, 4096);
-							if (ptr == IntPtr.Zero)
-							{
-								return null;
-							}
-						}
-					}
-					CompletionModel model = new CompletionModel();
-					model.model_ = ptr;
-					model.GetPrefix();
-					model.GetMiddle();
-					model.GetSuffix();
-					model.GetPad();
-					return model;
+					return null;
 				}
+				CompletionModel model = new CompletionModel();
+				model.model_ = ptr;
+				model.GetPrefix();
+				model.GetMiddle();
+				model.GetSuffix();
+				model.GetPad();
+				return model;
 			}
 			catch
 			{
@@ -230,7 +179,7 @@ namespace HandyTools.Completion
 			string absolutePath,
 			ITextSnapshot text,
 			LanguageInfo language,
-			int cursorPosition, string lineEnding, int tabSize, bool insertSpaces)
+			int cursorPosition)
 		{
 			if (IntPtr.Zero == model_)
 			{
@@ -241,12 +190,51 @@ namespace HandyTools.Completion
 				return null;
 			}
 			string query = createQuery(text, cursorPosition, 0.5f, MaxQuery);
+			IntPtr context = begin(model_, query.Length, query, MaxContext);
+			if(IntPtr.Zero == context)
+			{
+				return null;
+			}
+			buffer_.Length = 0;
+			generate(model_, context, MaxResponse-1, buffer_);
+			end(model_, context);
 
-			generated_.Length = 0;
-			generate_one(model_, MaxResponse, generated_, (uint)query.Length, query, MaxContext, 0, 1.0f, 0.1f, MaxContext, PadToken);
-			List<Completion> completions = new List<Completion>();
 #if false
-			getSuggestion(completions, generated_, cursorPosition, MaxWords);
+			string linefeed = "\n";
+			HandyToolsPackage package = await HandyToolsPackage.GetPackageAsync();
+			if (null != package)
+			{
+				Types.TypeLineFeed typeLineFeed = Types.TypeLineFeed.LF;
+				switch (language.language)
+				{
+					case Language.C_Cpp:
+						typeLineFeed = package.Options.LineFeedCpp;
+						break;
+					case Language.CSharp:
+						typeLineFeed = package.Options.LineFeedCSharp;
+						break;
+					default:
+						typeLineFeed = package.Options.LineFeedOthers;
+						break;
+				}
+				switch (typeLineFeed)
+				{
+					case Types.TypeLineFeed.LF:
+						linefeed = "\n";
+						break;
+					case Types.TypeLineFeed.CR:
+						linefeed = "\r";
+						break;
+					default:
+						linefeed = "\r\n";
+						break;
+				}
+			}
+#endif
+
+			List<Completion> completions = new List<Completion>();
+#if true
+			getSuggestion(completions, buffer_, cursorPosition, MaxLines);
 #else
 			Completion completion = new Completion();
 			completion.id = Guid.NewGuid();
@@ -294,11 +282,70 @@ namespace HandyTools.Completion
 			return buffer_.ToString();
 		}
 
-		private void getSuggestion(List<Completion> completions, StringBuilder buffer, int position, int max_words)
+		private int SkipLineFeed(StringBuilder buffer, int position)
 		{
-			string str = buffer.ToString();
-			splitWords(completions, str, position, max_words);
-			Log.Output(completions.ToString());
+			for (; position < buffer.Length; ++position)
+			{
+				if (!CodeUtil.IsLineFeed(buffer[position]))
+				{
+					break;
+				}
+			}
+			return position;
+		}
+
+		private int SkipSpace(StringBuilder buffer, int position)
+		{
+			for(; position < buffer.Length; ++position)
+			{
+				if (!CodeUtil.IsWhiteSpace(buffer[position]))
+				{
+					break;
+				}
+			}
+			return position;
+		}
+
+		private void getSuggestion(List<Completion> completions, StringBuilder buffer, int position, int max_lines)
+		{
+			int start = 0;
+			int i = 0;
+			for(; i<buffer.Length;)
+			{
+				if (CodeUtil.IsLineFeed(buffer[i]))
+				{
+					string line = buffer.ToString(start, i - start);
+					i = start = SkipLineFeed(buffer, i);
+					if (string.IsNullOrEmpty(line))
+					{
+						continue;
+					}
+					Completion completion = new Completion();
+					completion.text = line;
+					completion.startOffset = position;
+					completion.endOffset = position;
+					completions.Add(completion);
+					if(max_lines<= completions.Count)
+					{
+						break;
+					}
+				}
+				else
+				{
+					++i;
+				}
+			}
+			if(completions.Count<max_lines){
+				string line = buffer.ToString(start, i - start);
+				if (!string.IsNullOrEmpty(line))
+				{
+					Completion completion = new Completion();
+					completion.text = line;
+					completion.startOffset = position;
+					completion.endOffset = position;
+					completions.Add(completion);
+				}
+			}
 		}
 
 		private void splitWords(List<Completion> completions, string str, int position, int max_words)
@@ -316,7 +363,6 @@ namespace HandyTools.Completion
 					continue;
 				}
 				Completion completion = new Completion();
-				completion.id = Guid.NewGuid();
 				completion.text = words[i];
 				completion.startOffset = position;
 				completion.endOffset = position + words[i].Length;
@@ -324,13 +370,6 @@ namespace HandyTools.Completion
 				completions.Add(completion);
 			}
 		}
-
-
-		//public async Task AcceptCompletionAsync(string completionId)
-		//      {
-		//	AcceptCompletionRequest data = new() { metadata = GetMetadata(), completion_id = completionId };
-		//	await RequestCommandAsync<AcceptCompletionResponse>("AcceptCompletion", data);
-		//}
 
 		public void Dispose()
 		{

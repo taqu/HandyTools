@@ -16,7 +16,7 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement.Tab;
 
 namespace HandyTools.Commands
 {
-    internal static class CodeUtil
+    public static class CodeUtil
     {
 #if false
         private static readonly vsCMElement[] AcceptElements = {
@@ -557,7 +557,41 @@ namespace HandyTools.Commands
             }
         }
 
-        public static int IndexOfNewLine(string text)
+		public static bool IsWhiteSpace(char c)
+		{
+			switch (c)
+			{
+				default:
+					if (c != '\u00a0' && c != '\u0085')
+					{
+						return false;
+					}
+					goto case '\t';
+				case '\t':
+				case '\v':
+				case '\f':
+				case ' ':
+					return true;
+			}
+		}
+
+		public static bool IsLineFeed(char c)
+		{
+			switch (c)
+			{
+				default:
+					if (c != '\u00a0' && c != '\u0085')
+					{
+						return false;
+					}
+					goto case '\r';
+				case '\r':
+				case '\n':
+					return true;
+			}
+		}
+
+		public static int IndexOfNewLine(string text)
         {
             System.Text.RegularExpressions.Match newLineMatch = NewLineMatcher.Match(text);
 
@@ -567,6 +601,18 @@ namespace HandyTools.Commands
             }
             return -1;
         }
-    }
+
+		public static int IndexOfNewLine(ITextSnapshot text, int offset)
+		{
+            for(int i=offset; i<text.Length; ++i)
+            {
+                if (IsLineFeed(text[i]))
+                {
+                    return i;
+                }
+            }
+			return -1;
+		}
+	}
 }
 

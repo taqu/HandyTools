@@ -21,7 +21,7 @@ namespace HandyTools
         /// after the selection layer in the Z-order
         /// </summary>
         [Export(typeof(AdornmentLayerDefinition))]
-        [Name("RefactAI")]
+        [Name("HandyToolsAdornmentLayer")]
         [Order(After = PredefinedAdornmentLayers.Caret)]
         private AdornmentLayerDefinition editorAdornmentLayer;
 
