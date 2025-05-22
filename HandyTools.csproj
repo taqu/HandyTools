@@ -157,7 +157,7 @@
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
-    <Content Include="Resources\qwen2.5-coder-0.5b-instruct-q4_k_m.gguf">
+    <Content Include="Resources\refact-1_6b-Q4_K_M.gguf">
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <None Include="source.extension.vsixmanifest">

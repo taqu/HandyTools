@@ -47,23 +47,23 @@ namespace HandyTools.Completion
 		static extern int generate(IntPtr model, IntPtr context, int size, StringBuilder output);
 
 #if false
-		public const int MaxQuery = 3072;
-		public const int MaxContext = 4096;
+		public const int MaxQuery = 4096;
+		public const int MaxContext = 3072;
 		public const int MaxTokenSize = 16;
 		public const int MaxResponse = MaxContext*MaxTokenSize;
 #elif false
-		public const int MaxQuery = 1024;
-		public const int MaxContext = 2048;
+		public const int MaxQuery = 2048;
+		public const int MaxContext = 1024;
 		public const int MaxTokenSize = 16;
 		public const int MaxResponse = MaxContext*MaxTokenSize;
 #else
-		public const int MaxQuery = 256;
-		public const int MaxContext = 512;
+		public const int MaxQuery = 512;
+		public const int MaxContext = 256;
 		public const int MaxTokenSize = 16;
 		public const int MaxResponse = MaxContext * MaxTokenSize;
 #endif
 		public const int MaxLines = 4;
-		public const string ModelName = "qwen2.5-coder-0.5b-instruct-q4_k_m.gguf";
+		public const string ModelName = "refact-1_6b-Q4_K_M.gguf";
 
 		private bool disposed_ = false;
 		private IntPtr model_ = IntPtr.Zero;

@@ -6,7 +6,7 @@
 
 int main(void)
 {
-    llama::Model* model = llama::Model::load(u8"qwen2.5-coder-0.5b-instruct-q4_k_m.gguf", 99);
+    llama::Model* model = llama::Model::load(u8"refact-1_6b-Q4_K_M.gguf", 99);
     if(nullptr == model){
         return 1;
     }
