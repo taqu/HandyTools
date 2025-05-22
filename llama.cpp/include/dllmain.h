@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <Windows.h>
 
-#ifdef cplm_EXPORTS
+#ifdef LLAMACPP_EXPORTS
 #define CPLM_EXPORT __declspec(dllexport)
 #else
 #define CPLM_EXPORT __declspec(dllimport)
@@ -23,6 +23,7 @@ CPLM_EXPORT int32_t CPLM_STDCALL get_fim_pad(void* model, int32_t size, uint16_t
 CPLM_EXPORT void* CPLM_STDCALL begin(void* model, int32_t size, const uint16_t* prompt, int32_t n_predict, float temperature, uint32_t seed);
 CPLM_EXPORT void CPLM_STDCALL end(void* model, void* context);
 CPLM_EXPORT int32_t CPLM_STDCALL generate(void* model, void* context, int32_t size, uint16_t* output);
+CPLM_EXPORT int32_t CPLM_STDCALL stream(void* model, void* context, int32_t size, uint16_t* output);
 
 #ifdef __cplusplus
 }

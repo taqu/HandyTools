@@ -1,4 +1,6 @@
-﻿using HandyTools.Commands;
+﻿using EnvDTE;
+using EnvDTE80;
+using HandyTools.Commands;
 using HandyTools.Completion;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Language.Intellisense;
@@ -13,11 +15,13 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace HandyTools
 {
 
-	internal class CompletionCommandHandler : IOleCommandTarget
+	internal class CompletionCommandHandler : IOleCommandTarget, IDisposable
 	{
 		[DllImport("user32.dll", CharSet = CharSet.Auto, ExactSpelling = true)]
 		public static extern short GetAsyncKeyState(Int32 keyCode);
@@ -74,12 +78,14 @@ namespace HandyTools
 		private LanguageInfo language_;
 
 		private CompletionHandlerProvider provider_;
+        private CancellationTokenSource currentCancellTokenSource_ = null;
 
-		private bool hasCompletionUpdated = false;
+        private bool hasCompletionUpdated = false;
 		private List<Suggestion> suggestions_ = new List<Suggestion>();
+        private bool disposed_ = false;
 
-		//The command Handler processes keyboard input.
-		internal CompletionCommandHandler(IVsTextView textViewAdapter, ITextView textView, CompletionHandlerProvider provider)
+        //The command Handler processes keyboard input.
+        internal CompletionCommandHandler(IVsTextView textViewAdapter, ITextView textView, CompletionHandlerProvider provider)
 		{
 			textView_ = textView;
 			provider_ = provider;
@@ -99,9 +105,35 @@ namespace HandyTools
 			//add the command to the command chain
 			textViewAdapter_.AddCommandFilter(this, out nextCommandHandler_);
 			textView_.Caret.PositionChanged += CaretUpdate;
-		}
+        }
 
-		private MultilineGreyTextTagger GetTagger()
+        public static async Task<Command> GetCommandAsync(String name)
+        {
+            try
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                DTE2 dte = await VS.GetServiceAsync<DTE, DTE2>();
+                foreach (Command command in dte.Commands)
+                {
+                    if (string.IsNullOrEmpty(command.Name))
+                    {
+                        continue;
+                    }
+
+                    if (command.Name.Contains(name) && command.Bindings is object[] bindings)
+                    {
+						return command;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+				await Log.OutputAsync("Exception: " + ex);
+            }
+            return null;
+        }
+
+        private MultilineGreyTextTagger GetTagger()
 		{
 			var key = typeof(MultilineGreyTextTagger);
 			var props = textView_.TextBuffer.Properties;
@@ -127,70 +159,18 @@ namespace HandyTools
 			return !String.IsNullOrWhiteSpace(text);
 		}
 
-#if false
-        public async void GetCompletions()
+        private void UpdateRequestTokenSource(CancellationTokenSource newSource)
         {
-            SnapshotPoint? caretPoint = textView_.Caret.Position.Point.GetPoint(textBuffer => (!textBuffer.ContentType.IsOfType("projection")), PositionAffinity.Predecessor);
-
-            if (!caretPoint.HasValue)
+            if (currentCancellTokenSource_ != null)
             {
-                return;
+                currentCancellTokenSource_.Cancel();
+                currentCancellTokenSource_.Dispose();
             }
-            int lineN;
-            int characterN;
-            if(VSConstants.S_OK != textViewAdapter_.GetCaretPos(out lineN, out characterN)) {
-                return;
-            }
-            //Make sure caret is at the end of a line
-            String untrimLine = textView_.TextBuffer.CurrentSnapshot.GetLineFromLineNumber(lineN).GetText();
-            if (characterN < untrimLine.Length)
-            {
-                String afterCaret = untrimLine.Substring(characterN);
-                String escapedSymbols = Regex.Escape(":(){ },.\"\';");
-
-                String pattern = "[\\s\\t\\n\\r" + escapedSymbols + "]*";
-                Match m = Regex.Match(afterCaret, pattern, RegexOptions.IgnoreCase);
-                if (!(m.Success && m.Index == 0 && m.Length == afterCaret.Length))
-                {
-                    return;
-                }
-            }
-
-            HandyToolsPackage package = await HandyToolsPackage.GetPackageAsync();
-            if(null == package)
-            {
-                return;
-            }
-            LanguageInfo language = SupportedLanguage.GetLanguage(textView_.TextDataModel.ContentType);
-            CompletionModel completionModel = package.GetCompletionModel();
-            if(null == completionModel)
-            {
-                return;
-            }
-            completionModel.GetCompletionsAsync(document_.FilePath, textView_.TextSnapshot, language, lineN)
-
-            hasCompletionUpdated = false;
-            bool multiline = !IsInline(lineN);
-            if (completionTask == null || completionTask.IsCompleted)
-            {
-                //completionTask = client.RefactCompletion(m_textView.TextBuffer.Properties, filePath, lineN, multiline ? 0 : characterN, multiline);
-                //var s = await completionTask;
-                string s = string.Empty;
-                //await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                //if (completionTask == null || completionTask.IsCompleted)
-                {
-                    if (string.IsNullOrEmpty(s))
-                    {
-                        s = "test";
-                    }
-                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                    ShowSuggestion(s, lineN, characterN);
-                }
-            }
+            currentCancellTokenSource_ = newSource;
         }
-#else
 
-		public async Task GetCompletionsAsync()
+        public async Task GetCompletionsAsync()
+
 		{
 			try
 			{
@@ -255,7 +235,8 @@ namespace HandyTools
 				{
 					return;
 				}
-				IList<Completion.Completion>? completions = await completionModel.GetCompletionsAsync(document_.FilePath, textView_.TextSnapshot, language_, cursorPosition);
+                UpdateRequestTokenSource(new CancellationTokenSource());
+                IList<Completion.Completion>? completions = await completionModel.GetCompletionsAsync(document_.FilePath, textView_.TextSnapshot, language_, cursorPosition, currentCancellTokenSource_.Token);
 #if DEBUG
 				string text = string.Empty;
 				foreach (Completion.Completion completion in completions)
@@ -308,7 +289,6 @@ namespace HandyTools
 				await Log.OutputAsync("Exception: " + ex.ToString());
 			}
 		}
-#endif
 
 		public void ShowSuggestion(String s, int lineN, int characterN)
 		{
@@ -598,8 +578,8 @@ namespace HandyTools
 				{
 					return VSConstants.S_OK;
 				}
-			}
-			else if (nCmdID == (uint)VSConstants.VSStd2KCmdID.RETURN || nCmdID == (uint)VSConstants.VSStd2KCmdID.CANCEL)
+            }
+            else if (nCmdID == (uint)VSConstants.VSStd2KCmdID.RETURN || nCmdID == (uint)VSConstants.VSStd2KCmdID.CANCEL)
 			{
 				ClearSuggestion();
 			}
@@ -618,10 +598,14 @@ namespace HandyTools
 			//pass along the command so the char is added to the buffer
 			int retVal = nextCommandHandler_.Exec(ref pguidCmdGroup, nCmdID, nCmdexecopt, pvaIn, pvaOut);
 			bool handled = false;
-			if (hasCompletionUpdated) { ClearSuggestion(); }
+			if (hasCompletionUpdated) {
+				ClearSuggestion();
+			}
 
 			//gets lsp completions on added character or deletions
-			if (!typedChar.Equals(char.MinValue) || commandID == (uint)VSConstants.VSStd2KCmdID.RETURN || regenerateSuggestion)
+			if (!typedChar.Equals(char.MinValue)
+				|| commandID == (uint)VSConstants.VSStd2KCmdID.RETURN
+                || regenerateSuggestion)
 			{
 				if (regenerateSuggestion || suggestions_.Count <= 0)
 				{
@@ -633,7 +617,9 @@ namespace HandyTools
 				}
 				handled = true;
 			}
-			else if (commandID == (uint)VSConstants.VSStd2KCmdID.BACKSPACE || commandID == (uint)VSConstants.VSStd2KCmdID.DELETE)
+			else if (commandID == (uint)VSConstants.VSStd2KCmdID.BACKSPACE
+				|| commandID == (uint)VSConstants.VSStd2KCmdID.DELETE
+				|| (PackageGuids.HandyTools == pguidCmdGroup && PackageIds.CommandGetSuggestions == nCmdID))
 			{
 				_ = Task.Run(() => GetCompletionsAsync());
 				handled = true;
@@ -670,5 +656,25 @@ namespace HandyTools
 				language_ = SupportedLanguage.GetLanguage(textView_.TextDataModel.ContentType);
 			}
 		}
-	}
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposed_)
+            {
+				UpdateRequestTokenSource(null);
+                disposed_ = true;
+            }
+        }
+
+        ~CompletionCommandHandler()
+        {
+            Dispose(false);
+        }
+    }
 }

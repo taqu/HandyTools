@@ -110,6 +110,25 @@ extern "C"
         return r;
     }
 
+    int32_t CPLM_STDCALL stream(void* memory0, void* memory1, int32_t size, uint16_t* output)
+    {
+        assert(nullptr != memory0);
+        assert(nullptr != memory1);
+        assert(0<size);
+        llama::Model* model = (llama::Model*)memory0;
+        llama::Context* context = (llama::Context*)memory1;
+        context->create_stream(size);
+
+        int32_t r = model->stream(size, context);
+        if(r<0){
+            return -1;
+        }
+        if(0<r){
+            convert(size, output, context->stream_);
+        }
+        return r;
+    }
+
     int32_t CPLM_STDCALL get_fim_prefix(void* memory, int32_t size, uint16_t* str)
     {
         assert(nullptr != memory);

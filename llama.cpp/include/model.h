@@ -65,6 +65,13 @@ public:
     Context* begin(const char8_t* prompt, int32_t n_predict, float temperature = 0.8f, uint32_t seed = LLAMA_DEFAULT_SEED);
     void end(Context* context);
     int32_t generate(int32_t size, char8_t* output, Context* context);
+    /**
+     * @brief 
+     * @param size 
+     * @param context 
+     * @return -1:error, 0:continue, 1:finished
+     */
+    int32_t stream(int32_t size, Context* context);
 
     const struct llama_vocab* vocab() const;
 private:
@@ -84,16 +91,19 @@ public:
     Context();
     ~Context();
 
-private:
+    void create_stream(int32_t size);
+
     Context(const Context&) = delete;
     Context& operator=(const Context&) = delete;
-    friend class Model;
+
     llama_context* context_;
     size_t num_tokens_;
     llama_token* prompt_tokens_;
     llama_batch batch_;
     int32_t n_prompt_;
     int32_t n_predict_;
+    int32_t n_pos_;
+    char8_t* stream_;
 };
 
 } // namespace llama

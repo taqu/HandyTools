@@ -53,10 +53,13 @@
     <Compile Include="Commands\CodeUtil.cs" />
     <Compile Include="Commands\CommandAddDocument.cs" />
     <Compile Include="Commands\CommandBaseAI.cs" />
-    <Compile Include="Commands\CommandCompletion.cs" />
+    <Compile Include="Commands\CommandBaseCompletion.cs" />
+    <Compile Include="Commands\CommandCompleteSuggestion.cs" />
     <Compile Include="Commands\CommandExplanation.cs" />
+    <Compile Include="Commands\CommandGetSuggestions.cs" />
     <Compile Include="Commands\CommandPreviewDocument.cs" />
     <Compile Include="Commands\CommandShowChatWindow.cs" />
+    <Compile Include="Commands\CommandShowNextSuggestion.cs" />
     <Compile Include="Commands\CommandTranslateAndReplace.cs" />
     <Compile Include="Commands\CommandTranslation.cs" />
     <Compile Include="Completion\CommandAcceptCompletion.cs" />

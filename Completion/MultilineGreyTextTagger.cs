@@ -61,7 +61,7 @@ namespace HandyTools
 		private string virtualText_;
 		/// suggestion to display
 		/// first string is to match against second item: array is for formatting
-		private static Tuple<string, string[]> suggestion_ = null;
+		private Tuple<string, string[]> suggestion_ = null;
 
 		private InlineGreyTextTagger GetTagger()
 		{
@@ -105,7 +105,7 @@ namespace HandyTools
 				if (line.Length - caretPoint > 0)
 				{
 					string currentText = line.Substring(0, caretPoint);
-					combineSuggestion = currentText + newSuggestion;
+					combineSuggestion = currentText + newSuggestion.text_;
 					userEndingText = line.Substring(caretPoint).Trim();
 					var userIndex = newSuggestion.text_.IndexOf(userEndingText);
 
@@ -337,7 +337,7 @@ namespace HandyTools
 			}
 			catch (ArgumentOutOfRangeException e)
 			{
-				Debug.Write(e);
+				Log.Output("Exception: " + e);
 			}
 		}
 
@@ -488,10 +488,6 @@ namespace HandyTools
 		//sets up the suggestion for display
 		void ShowSuggestion(string text, int suggestionLineStart, bool prefixLineFeed=false)
 		{
-			if (prefixLineFeed)
-			{
-				text = "<br>" + text;
-			}
 			UpdateAdornment(view, text, suggestionLineStart);
 			showSuggestion = true;
 			MarkDirty();

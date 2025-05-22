@@ -301,6 +301,66 @@ int32_t Model::generate(int32_t size, char8_t* output, Context* context)
     return n_decode;
 }
 
+int32_t Model::stream(int32_t size, Context* context)
+{
+    assert(0<size);
+    assert(nullptr != context);
+    int32_t n_decode = 0;
+    llama_token new_token_id;
+    llama_batch& batch = context->batch_;
+    const llama_vocab * vocab = llama_model_get_vocab(model_);
+    int32_t n_pos = context->n_pos_;
+    int32_t len = 0;
+    char8_t* output = context->stream_;
+    if(0 == n_pos){
+        output[0] = u8'\0';
+    }
+
+    int32_t max_tokens = context->n_prompt_ + context->n_predict_;
+    for(; n_pos + batch.n_tokens < max_tokens;) {
+        // evaluate the current batch with the transformer model
+        if(llama_decode(context->context_, batch)) {
+            return -1;
+        }
+
+        n_pos += batch.n_tokens;
+
+        // sample the next token
+        {
+            new_token_id = llama_sampler_sample(sampler_, context->context_, -1);
+
+            // is it an end of generation?
+            if(llama_vocab_is_eog(vocab, new_token_id)) {
+                break;
+            }
+
+            char buf[64];
+            int32_t n = llama_token_to_piece(vocab, new_token_id, buf, sizeof(buf)-1, 0, true);
+            if(n < 0) {
+                return -1;
+            }
+            n = (std::min)(size-len-1, n);
+            buf[n] = '\0';
+#ifdef _WIN32
+            strcat_s((char*)output, size, buf);
+#else
+            strcat((char*)output, buf);
+#endif
+            len += n;
+            if(size <= len) {
+                break;
+            }
+            // prepare the next batch with the sampled token
+            batch = llama_batch_get_one(&new_token_id, 1);
+
+            n_decode += 1;
+        }
+    }
+    context->n_pos_ = n_pos;
+    return (size<=len) || (max_tokens<=(n_pos + batch.n_tokens))
+        ? 1 : 0;
+}
+
 const struct llama_vocab* Model::vocab() const
 {
     assert(nullptr != model_);
@@ -316,11 +376,15 @@ Context::Context()
     , batch_{}
     , n_prompt_(0)
     , n_predict_(0)
+    , n_pos_(0)
+    , stream_(nullptr)
 {
 }
 
 Context::~Context()
 {
+    ::free(stream_);
+    stream_ = nullptr;
     if(nullptr != prompt_tokens_) {
         ::free(prompt_tokens_);
         prompt_tokens_ = nullptr;
@@ -331,4 +395,14 @@ Context::~Context()
         context_ = nullptr;
     }
 }
+
+void Context::create_stream(int32_t size)
+{
+    if(nullptr != stream_){
+        return;
+    }
+    int32_t s = size * 4 + 1;
+    stream_ = (char8_t*)::malloc(sizeof(char8_t)*s);
+}
+
 } // namespace llama

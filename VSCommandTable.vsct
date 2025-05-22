@@ -37,13 +37,6 @@
 					<ButtonText>Chat Window</ButtonText>
 				</Strings>
 			</Button>
-			<Button guid="HandyTools" id="CommandCompletion" priority="0x0000" type="Button">
-				<Icon guid="ImageCatalogGuid" id="Writeable" />
-				<CommandFlag>IconIsMoniker</CommandFlag>
-				<Strings>
-					<ButtonText>Multi Line Completion</ButtonText>
-				</Strings>
-			</Button>
 			<Button guid="HandyTools" id="CommandExplanation" priority="0x0001" type="Button">
 				<Icon guid="ImageCatalogGuid" id="Dictionary" />
 				<CommandFlag>IconIsMoniker</CommandFlag>
@@ -79,18 +72,25 @@
 					<ButtonText>Preview Dxygen</ButtonText>
 				</Strings>
 			</Button>
-			<Button guid="HandyTools" id="CommandLineCompletion" priority="0x0006" type="Button">
+			<Button guid="HandyTools" id="CommandGetSuggestions" priority="0x0006" type="Button">
 				<Icon guid="ImageCatalogGuid" id="Writeable" />
 				<CommandFlag>IconIsMoniker</CommandFlag>
 				<Strings>
-					<ButtonText>One Line Completion</ButtonText>
+					<ButtonText>Get Suggestions</ButtonText>
 				</Strings>
 			</Button>
-			<Button guid="HandyTools" id="CommandAcceptCompletion" priority="0x0007" type="Button">
+			<Button guid="HandyTools" id="CommandShowNextSuggestion" priority="0x0007" type="Button">
 				<Icon guid="ImageCatalogGuid" id="Writeable" />
 				<CommandFlag>IconIsMoniker</CommandFlag>
 				<Strings>
-					<ButtonText>Accept Completion</ButtonText>
+					<ButtonText>Show Next Suggestion</ButtonText>
+				</Strings>
+			</Button>
+			<Button guid="HandyTools" id="CommandCompleteSuggestion" priority="0x0008" type="Button">
+				<Icon guid="ImageCatalogGuid" id="Writeable" />
+				<CommandFlag>IconIsMoniker</CommandFlag>
+				<Strings>
+					<ButtonText>Accept Suggestion</ButtonText>
 				</Strings>
 			</Button>
 		</Buttons>
@@ -107,9 +107,6 @@
 		<CommandPlacement guid="HandyTools" id="HandyTools_CommandGroup" priority="0x0100">
 			<Parent guid="HandyTools" id="HandyTools_Menu" />
 		</CommandPlacement>
-		<CommandPlacement guid="HandyTools" id="CommandCompletion" priority="0x0000">
-			<Parent guid="HandyTools" id="HandyTools_CommandGroup" />
-		</CommandPlacement>
 		<CommandPlacement guid="HandyTools" id="CommandExplanation" priority="0x0001">
 			<Parent guid="HandyTools" id="HandyTools_CommandGroup" />
 		</CommandPlacement>
@@ -125,10 +122,13 @@
 		<CommandPlacement guid="HandyTools" id="CommandPreviewDocument" priority="0x0005">
 			<Parent guid="HandyTools" id="HandyTools_CommandGroup" />
 		</CommandPlacement>
-		<CommandPlacement guid="HandyTools" id="CommandLineCompletion" priority="0x0006">
+		<CommandPlacement guid="HandyTools" id="CommandGetSuggestions" priority="0x0006">
 			<Parent guid="HandyTools" id="HandyTools_CommandGroup" />
 		</CommandPlacement>
-		<CommandPlacement guid="HandyTools" id="CommandAcceptCompletion" priority="0x0007">
+		<CommandPlacement guid="HandyTools" id="CommandShowNextSuggestion" priority="0x0007">
+			<Parent guid="HandyTools" id="HandyTools_CommandGroup" />
+		</CommandPlacement>
+		<CommandPlacement guid="HandyTools" id="CommandCompleteSuggestion" priority="0x0008">
 			<Parent guid="HandyTools" id="HandyTools_CommandGroup" />
 		</CommandPlacement>
 
@@ -144,14 +144,14 @@
 	</CommandPlacements>
 
 	<KeyBindings>
-		<KeyBinding guid="HandyTools" id="CommandCompletion" key1="VK_F1" mod1="ALT" editor="guidVSStd97" />
 		<KeyBinding guid="HandyTools" id="CommandExplanation" key1="VK_F2" mod1="ALT" editor="guidVSStd97" />
 		<KeyBinding guid="HandyTools" id="CommandTranslation" key1="VK_F3" mod1="ALT" editor="guidVSStd97" />
 		<KeyBinding guid="HandyTools" id="CommandTranslateAndReplace" key1="VK_F4" mod1="ALT" editor="guidVSStd97" />
 		<KeyBinding guid="HandyTools" id="CommandAddDocument" key1="VK_F5" mod1="ALT" editor="guidVSStd97" />
 		<KeyBinding guid="HandyTools" id="CommandPreviewDocument" key1="VK_F6" mod1="ALT" editor="guidVSStd97" />
-		<KeyBinding guid="HandyTools" id="CommandLineCompletion" key1="VK_F7" mod1="ALT" editor="guidVSStd97" />
-		<KeyBinding guid="HandyTools" id="CommandAcceptCompletion" key1="VK_TAB" mod1="ALT" editor="guidVSStd97" />
+		<KeyBinding guid="HandyTools" id="CommandGetSuggestions" key1="VK_F7" mod1="ALT" editor="guidVSStd97" />
+		<KeyBinding guid="HandyTools" id="CommandShowNextSuggestion" key1="VK_F8" mod1="ALT" editor="guidVSStd97" />
+		<KeyBinding guid="HandyTools" id="CommandCompleteSuggestion" key1="VK_TAB" mod1="ALT" editor="guidVSStd97" />
 	</KeyBindings>
 
 	<Symbols>
@@ -164,14 +164,14 @@
 			<IDSymbol name="HandyTools_ViewMenu" value="0x1005" />
 
 			<IDSymbol name="CommandShowChatWindow" value="0x2000" />
-			<IDSymbol name="CommandCompletion" value="0x2001" />
 			<IDSymbol name="CommandExplanation" value="0x2002" />
 			<IDSymbol name="CommandTranslation" value="0x2003" />
 			<IDSymbol name="CommandTranslateAndReplace" value="0x2004" />
 			<IDSymbol name="CommandAddDocument" value="0x2005" />
 			<IDSymbol name="CommandPreviewDocument" value="0x2006" />
-			<IDSymbol name="CommandLineCompletion" value="0x2007" />
-			<IDSymbol name="CommandAcceptCompletion" value="0x2008" />
+			<IDSymbol name="CommandGetSuggestions" value="0x2001" />
+			<IDSymbol name="CommandShowNextSuggestion" value="0x2007" />
+			<IDSymbol name="CommandCompleteSuggestion" value="0x2008" />
 		</GuidSymbol>
 	</Symbols>
 </CommandTable>

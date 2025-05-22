@@ -3,6 +3,7 @@ using Microsoft.VisualStudio.Text;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace HandyTools.Completion
@@ -175,11 +176,12 @@ namespace HandyTools.Completion
 			}
 		}
 
-		public async Task<IList<Completion>?> GetCompletionsAsync(
+		public async Task<IList<Completion>> GetCompletionsAsync(
 			string absolutePath,
 			ITextSnapshot text,
 			LanguageInfo language,
-			int cursorPosition)
+			int cursorPosition,
+			CancellationToken cancellationToken)
 		{
 			if (IntPtr.Zero == model_)
 			{
@@ -189,60 +191,41 @@ namespace HandyTools.Completion
 			{
 				return null;
 			}
-			string query = createQuery(text, cursorPosition, 0.5f, MaxQuery);
-			IntPtr context = begin(model_, query.Length, query, MaxContext);
-			if(IntPtr.Zero == context)
+            string query = createQuery(text, cursorPosition, 0.5f, MaxQuery);
+            IntPtr context = begin(model_, query.Length, query, MaxContext);
+            if (IntPtr.Zero == context)
+            {
+                return null;
+            }
+            buffer_.Length = 0;
+			try
 			{
-				return null;
-			}
-			buffer_.Length = 0;
-			generate(model_, context, MaxResponse-1, buffer_);
-			end(model_, context);
+				IList<Completion>? completions = await Task.Run<IList<Completion>?>(
+					() =>
+					{
+						return GetCompletionsImpl(context, cursorPosition);
 
-#if false
-			string linefeed = "\n";
-			HandyToolsPackage package = await HandyToolsPackage.GetPackageAsync();
-			if (null != package)
+					},
+					cancellationToken
+				);
+				end(model_, context);
+				return completions;
+            }
+            catch(OperationCanceledException e)
 			{
-				Types.TypeLineFeed typeLineFeed = Types.TypeLineFeed.LF;
-				switch (language.language)
-				{
-					case Language.C_Cpp:
-						typeLineFeed = package.Options.LineFeedCpp;
-						break;
-					case Language.CSharp:
-						typeLineFeed = package.Options.LineFeedCSharp;
-						break;
-					default:
-						typeLineFeed = package.Options.LineFeedOthers;
-						break;
-				}
-				switch (typeLineFeed)
-				{
-					case Types.TypeLineFeed.LF:
-						linefeed = "\n";
-						break;
-					case Types.TypeLineFeed.CR:
-						linefeed = "\r";
-						break;
-					default:
-						linefeed = "\r\n";
-						break;
-				}
-			}
-#endif
+                end(model_, context);
+				return null;
+            }
+        }
+
+        private IList<Completion>? GetCompletionsImpl(
+            IntPtr context,
+            int cursorPosition)
+		{
+			generate(model_, context, MaxResponse-1, buffer_);
 
 			List<Completion> completions = new List<Completion>();
-#if true
 			getSuggestion(completions, buffer_, cursorPosition, MaxLines);
-#else
-			Completion completion = new Completion();
-			completion.id = Guid.NewGuid();
-			completion.text = "test";
-			completion.startOffset = cursorPosition;
-			completion.endOffset = completion.startOffset + completion.text.Length;
-			completions.Add(completion);
-#endif
 			return completions;
 		}
 
